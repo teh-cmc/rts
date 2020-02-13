@@ -1,21 +1,83 @@
+#![feature(bindings_after_at)]
+
 use raylib::prelude::*;
 use specs::{prelude::*, storage::HashMapStorage, WorldExt};
 
 // -----------------------------------------------------------------------------
 
+// TODO(cmc): never reference raylib in there.
 pub mod resources {
+    use raylib::prelude::*;
+    use specs::{prelude::*, storage::HashMapStorage, WorldExt};
+
     #[derive(Default)]
     pub struct DeltaTime(f32);
+
+    // TODO(cmc): bitsets
+    // TODO(cmc): portable design (i.e. abstract raylib)
+    #[derive(Default)]
+    pub struct MouseState {
+        pub pos: (i32, i32),
+
+        pub pressed: [bool; 8],
+        pub released: [bool; 8],
+        pub down: [bool; 8],
+    }
+
+    impl MouseState {
+        pub fn new(rl: &RaylibHandle) -> Self {
+            let mut s = Self::default();
+
+            s.pos = (rl.get_mouse_x(), rl.get_mouse_y());
+
+            s.pressed[0] = rl.is_mouse_button_pressed(MouseButton::MOUSE_LEFT_BUTTON);
+            s.pressed[1] = rl.is_mouse_button_pressed(MouseButton::MOUSE_RIGHT_BUTTON);
+            s.pressed[2] = rl.is_mouse_button_pressed(MouseButton::MOUSE_MIDDLE_BUTTON);
+
+            s.released[0] = rl.is_mouse_button_released(MouseButton::MOUSE_LEFT_BUTTON);
+            s.released[1] = rl.is_mouse_button_released(MouseButton::MOUSE_RIGHT_BUTTON);
+            s.released[2] = rl.is_mouse_button_released(MouseButton::MOUSE_MIDDLE_BUTTON);
+
+            s.down[0] = rl.is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON);
+            s.down[1] = rl.is_mouse_button_down(MouseButton::MOUSE_RIGHT_BUTTON);
+            s.down[2] = rl.is_mouse_button_down(MouseButton::MOUSE_MIDDLE_BUTTON);
+
+            s
+        }
+    }
 }
 
+// TODO(cmc): never reference raylib in there.
 pub mod components {
     use raylib::prelude::*;
     use specs::{prelude::*, storage::HashMapStorage, WorldExt};
 
     #[derive(Clone, Debug)]
-    pub struct Pos(pub Vector3);
-    impl Component for Pos {
+    pub struct Pos3D(pub Vector3);
+    impl Component for Pos3D {
         type Storage = VecStorage<Self>;
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub struct Pos2D(pub i32, pub i32);
+    impl Component for Pos2D {
+        type Storage = HashMapStorage<Self>;
+    }
+    impl From<(i32, i32)> for Pos2D {
+        fn from((x, y): (i32, i32)) -> Self {
+            Self(x, y)
+        }
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub struct Dim2D(pub i32, pub i32);
+    impl Component for Dim2D {
+        type Storage = HashMapStorage<Self>;
+    }
+    impl From<(i32, i32)> for Dim2D {
+        fn from((x, y): (i32, i32)) -> Self {
+            Self(x, y)
+        }
     }
 
     #[derive(Default, Debug)]
@@ -25,8 +87,13 @@ pub mod components {
     }
 }
 
+// TODO(cmc): never reference raylib in there.
 pub mod systems {
-    use super::components;
+    use super::{
+        components,
+        components::{Dim2D, Pos2D},
+        resources,
+    };
     use raylib::prelude::*;
     use specs::{prelude::*, storage::HashMapStorage, WorldExt};
     use std::{
@@ -34,55 +101,95 @@ pub mod systems {
         sync::{Arc, Mutex},
     };
 
-    pub struct Renderer {
-        // rl_handle: Arc<Mutex<RaylibHandle>>,
-    // gfx_handle: RaylibThread,
+    // -----------------------------------------------------------------------------
+
+    enum SelectorState {
+        Idle,
+        Selecting(Entity, Pos2D),
+        Confirmed(Entity, Pos2D, Dim2D),
     }
 
-    // impl Renderer {
-    //     pub fn new(rl_handle: Arc<Mutex<RaylibHandle>>, gfx_handle: RaylibThread)
-    // -> Self {         Self {
-    //             rl_handle,
-    //             gfx_handle,
-    //         }
-    //     }
-    // }
+    pub struct Selector {
+        state: SelectorState,
+    }
+
+    impl Default for Selector {
+        fn default() -> Self {
+            Self {
+                state: SelectorState::Idle,
+            }
+        }
+    }
+
+    impl<'a> System<'a> for Selector {
+        type SystemData = (
+            Entities<'a>,
+            ReadExpect<'a, resources::MouseState>,
+            ReadStorage<'a, components::Pos3D>,
+            WriteStorage<'a, components::Pos2D>,
+            WriteStorage<'a, components::Dim2D>,
+        );
+
+        fn run(&mut self, sys_data: Self::SystemData) {
+            let (entities, mouse_state, positions, mut pos2Ds, mut dim2Ds) = sys_data;
+            match self.state {
+                SelectorState::Idle => {
+                    if mouse_state.pressed[0] {
+                        let pos: Pos2D = mouse_state.pos.into();
+                        let e = entities.build_entity().with(pos, &mut pos2Ds).build();
+                        self.state = SelectorState::Selecting(e, pos);
+                    }
+                }
+                SelectorState::Selecting(e, upper_left @ Pos2D(x1, y1)) => {
+                    let pos: Pos2D = mouse_state.pos.into();
+                    let dim = Dim2D(pos.0 - x1, pos.1 - y1);
+                    dim2Ds.insert(e, dim).unwrap();
+                    if mouse_state.released[0] {
+                        self.state = SelectorState::Confirmed(e, upper_left, dim);
+                    }
+                }
+                SelectorState::Confirmed(e, _, _) => {
+                    entities.delete(e).unwrap();
+                    self.state = SelectorState::Idle;
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------------
+
+    pub struct Renderer;
 
     impl<'a> System<'a> for Renderer {
         type SystemData = (
             WriteExpect<'a, super::RawDrawHandle>,
             ReadExpect<'a, super::Camera>,
-            ReadStorage<'a, components::Pos>,
+            ReadStorage<'a, components::Pos3D>,
+            ReadStorage<'a, components::Pos2D>,
+            ReadStorage<'a, components::Dim2D>,
         );
 
-        fn run(&mut self, (mut d, cam, positions): Self::SystemData) {
+        fn run(&mut self, (mut d, cam, pos3Ds, pos2Ds, dim2Ds): Self::SystemData) {
             let d = d.lol();
-            d.clear_background(Color::DARKGRAY);
             {
                 let mut d2 = d.begin_mode_3D(cam.deref().inner);
-                for pos in positions.join() {
+                for pos in pos3Ds.join() {
                     d2.draw_cube(pos.0, 2.0, 2.0, 2.0, Color::RED);
                     d2.draw_cube_wires(pos.0, 2.0, 2.0, 2.0, Color::BLACK);
                 }
             }
-
-            d.draw_rectangle(10, 10, 220, 70, Color::SKYBLUE);
-            d.draw_rectangle_lines(10, 10, 220, 70, Color::BLUE);
-            d.draw_text(
-                "First person camera default controls:",
-                20,
-                20,
-                10,
-                Color::BLACK,
-            );
-            d.draw_text("- Move with keys: W, A, S, D", 40, 40, 10, Color::DARKGRAY);
-            d.draw_text("- Mouse move to look around", 40, 60, 10, Color::DARKGRAY);
+            for (&Pos2D(x, y), &Dim2D(w, h)) in (&pos2Ds, &dim2Ds).join() {
+                d.draw_rectangle(x, y, w, h, Color::GREEN.fade(0.1));
+                d.draw_rectangle_lines(x, y, w, h, Color::GREEN);
+            }
         }
     }
 }
 
 // -----------------------------------------------------------------------------
 
+// TODO(cmc): Camera should be a proper system.
+// TODO(cmc): Delta should be a resource (DeltaTime).
 #[derive(Debug, Clone)]
 pub struct Camera {
     inner: Camera3D,
@@ -94,6 +201,7 @@ pub struct Camera {
 
 impl Camera {
     const PI: f32 = consts::PI as f32;
+    const Y: f32 = 30.0;
 
     pub fn new(inner: Camera3D) -> Self {
         Self {
@@ -105,7 +213,8 @@ impl Camera {
     }
 
     // https://gamedev.stackexchange.com/a/159314
-    pub fn update(&mut self, delta: f32, (l, u, r, d): (bool, bool, bool, bool)) {
+    // TODO(cmc): should be bitsets obviously
+    pub fn update(&mut self, delta: f32, (l, u, r, d): (bool, bool, bool, bool), zoom: i32) {
         if l {
             self.inner.position.x += delta * self.x_rad.cos();
             self.inner.position.z -= delta * self.x_rad.sin();
@@ -123,6 +232,10 @@ impl Camera {
             self.inner.position.z -= delta * self.x_rad.cos();
         }
 
+        self.y_rad += zoom as f32 * delta * 10. * Self::PI / 180.0;
+        self.y_rad = self.y_rad.max(-Self::PI / 3.0).min(-Self::PI * 0.15);
+        self.inner.position.y = Self::Y * 2. * self.y_rad.abs();
+
         self.inner.target = Vector3::new(
             self.inner.position.x + self.radius * self.x_rad.sin() * self.y_rad.cos(),
             self.inner.position.y + self.radius * self.y_rad.sin(),
@@ -138,6 +251,7 @@ const WINDOW_HEIGHT: i32 = 720;
 
 use std::sync::{Arc, RwLock};
 
+// TODO(cmc): do this properly.
 pub struct RawDrawHandle(*mut ());
 unsafe impl Send for RawDrawHandle {}
 unsafe impl Sync for RawDrawHandle {}
@@ -163,31 +277,37 @@ fn main() {
         );
 
         rl.set_camera_mode(&inner, CameraMode::CAMERA_CUSTOM);
-        rl.set_target_fps(60);
+        rl.set_target_fps(120);
 
         let mut cam = Camera::new(inner);
-        cam.update(0.0, (false, false, false, false));
+        cam.update(0.0, (false, false, false, false), 0);
 
         cam
     };
 
     let mut world = World::new();
     let mut dispatcher = DispatcherBuilder::new()
+        .with(systems::Selector::default(), "selector", &[])
         .with_thread_local(systems::Renderer {})
         .build();
     dispatcher.setup(&mut world);
 
-    world
-        .create_entity()
-        .with(components::Pos(Vector3::zero()))
-        .build();
-    world
-        .create_entity()
-        .with(components::Pos((-10.0, 0.0, 0.0).into()))
-        .build();
+    use resources::MouseState;
+    world.insert(MouseState::default());
+
+    for x in -10..=10 {
+        for z in -10..=10 {
+            let pos: Vector3 = (x as f32 * 4.0, 0.0, z as f32 * 4.0).into();
+            world.create_entity().with(components::Pos3D(pos)).build();
+        }
+    }
 
     while !rl.window_should_close() {
-        let delta = rl.get_frame_time() * 10.0;
+        let delta = rl.get_frame_time() * 50.0;
+        let (swidth, sheight) = (rl.get_screen_width() - 100, 40);
+
+        let mouse_state = resources::MouseState::new(&rl);
+        *world.write_resource::<MouseState>() = mouse_state;
 
         cam.update(
             delta,
@@ -197,13 +317,30 @@ fn main() {
                 rl.is_key_down(KeyboardKey::KEY_D),
                 rl.is_key_down(KeyboardKey::KEY_S),
             ),
+            rl.get_mouse_wheel_move(),
         );
 
         world.insert(cam.clone());
         let mut d = rl.begin_drawing(&thread);
         world.insert(RawDrawHandle(unsafe { std::mem::transmute(&mut d) }));
 
+        d.clear_background(Color::DARKGRAY);
+
         dispatcher.dispatch(&mut world);
         world.maintain();
+
+        d.draw_rectangle(10, 10, 220, 70, Color::SKYBLUE);
+        d.draw_rectangle_lines(10, 10, 220, 70, Color::BLUE);
+        d.draw_text(
+            "First person camera default controls:",
+            20,
+            20,
+            10,
+            Color::BLACK,
+        );
+        d.draw_text("- Move with keys: W, A, S, D", 40, 40, 10, Color::DARKGRAY);
+        d.draw_text("- Mouse move to look around", 40, 60, 10, Color::DARKGRAY);
+
+        d.draw_fps(swidth, sheight);
     }
 }
