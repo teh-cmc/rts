@@ -9,6 +9,19 @@ use specs::{prelude::*, storage::HashMapStorage, WorldExt};
 pub mod resources {
     use raylib::prelude::*;
     use specs::{prelude::*, storage::HashMapStorage, WorldExt};
+    use std::sync::{Arc, RwLock};
+
+    pub struct Raylib(pub Arc<RwLock<(RaylibHandle, RaylibThread)>>);
+    impl Raylib {
+        pub fn new(rl: RaylibHandle, thread: RaylibThread) -> Self {
+            Self(Arc::new(RwLock::new(rl, thread)))
+        }
+    }
+    impl Clone for Raylib {
+        fn clone(&self) -> Self {
+            Self(Arc::clone(self.0))
+        }
+    }
 
     #[derive(Default)]
     pub struct DeltaTime(f32);
@@ -124,6 +137,7 @@ pub mod systems {
     impl<'a> System<'a> for Selector {
         type SystemData = (
             Entities<'a>,
+            ReadExpect<'a, super::Camera>,
             ReadExpect<'a, resources::MouseState>,
             ReadStorage<'a, components::Pos3D>,
             WriteStorage<'a, components::Pos2D>,
@@ -131,7 +145,7 @@ pub mod systems {
         );
 
         fn run(&mut self, sys_data: Self::SystemData) {
-            let (entities, mouse_state, positions, mut pos2Ds, mut dim2Ds) = sys_data;
+            let (entities, cam, mouse_state, positions, mut pos2Ds, mut dim2Ds) = sys_data;
             match self.state {
                 SelectorState::Idle => {
                     if mouse_state.pressed[0] {
@@ -162,7 +176,7 @@ pub mod systems {
 
     impl<'a> System<'a> for Renderer {
         type SystemData = (
-            WriteExpect<'a, super::RawDrawHandle>,
+            ReadExpect<'a, resources::Raylib>,
             ReadExpect<'a, super::Camera>,
             ReadStorage<'a, components::Pos3D>,
             ReadStorage<'a, components::Pos2D>,
@@ -188,7 +202,7 @@ pub mod systems {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc): Camera should be a proper system.
+// TODO(cmc): Camera should be a proper system (via resource).
 // TODO(cmc): Delta should be a resource (DeltaTime).
 #[derive(Debug, Clone)]
 pub struct Camera {
@@ -270,7 +284,7 @@ fn main() {
 
     let mut cam = {
         let inner = Camera3D::perspective(
-            (0.0, 30.0, 0.0).into(),
+            Vector3::zero(),
             Vector3::zero(),
             (0.0, 1.0, 0.0).into(),
             60.0,
@@ -302,6 +316,9 @@ fn main() {
         }
     }
 
+    let rl = resources::Raylib::new(rl, thread);
+    world.insert(rl.clone()); // Arc
+
     while !rl.window_should_close() {
         let delta = rl.get_frame_time() * 50.0;
         let (swidth, sheight) = (rl.get_screen_width() - 100, 40);
@@ -321,9 +338,10 @@ fn main() {
         );
 
         world.insert(cam.clone());
-        let mut d = rl.begin_drawing(&thread);
-        world.insert(RawDrawHandle(unsafe { std::mem::transmute(&mut d) }));
+        // let mut d = rl.begin_drawing(&thread);
+        // world.insert(RawDrawHandle(unsafe { std::mem::transmute(&mut d) }));
 
+        let mut d = rl.lock().unwrap().begin_drawing(&thread);
         d.clear_background(Color::DARKGRAY);
 
         dispatcher.dispatch(&mut world);
