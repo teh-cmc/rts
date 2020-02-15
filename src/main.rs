@@ -19,15 +19,15 @@ pub mod resources {
         }
 
         pub fn read<T>(&self, mut f: impl FnMut(&RaylibHandle) -> T) -> T {
-            f(&*self.0.read().unwrap())
+            f(&*self.0.try_read().unwrap())
         }
 
         pub fn write<T>(&mut self, mut f: impl FnMut(&mut RaylibHandle) -> T) -> T {
-            f(&mut *self.0.write().unwrap())
+            f(&mut *self.0.try_write().unwrap())
         }
 
         pub fn draw(&mut self, tl: &RaylibThread, mut f: impl FnMut(&mut RaylibDrawHandle)) {
-            let mut guard = self.0.write().unwrap();
+            let mut guard = self.0.try_write().unwrap();
             let mut d = guard.begin_drawing(tl);
             f(&mut d)
         }
@@ -203,6 +203,7 @@ pub mod systems {
         );
 
         fn run(&mut self, (mut rl, cam, pos3Ds, pos2Ds, dim2Ds): Self::SystemData) {
+            // TODO(cmc): safety note.
             let thread: RaylibThread = unsafe { std::mem::transmute(()) };
             rl.draw(&thread, |d| {
                 d.clear_background(Color::DARKGRAY);
@@ -286,19 +287,6 @@ impl Camera {
 
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
-
-use std::sync::{Arc, RwLock};
-
-// TODO(cmc): do this properly.
-pub struct RawDrawHandle(*mut ());
-unsafe impl Send for RawDrawHandle {}
-unsafe impl Sync for RawDrawHandle {}
-
-impl RawDrawHandle {
-    pub fn lol(&mut self) -> &mut RaylibDrawHandle {
-        unsafe { std::mem::transmute(&mut self.0) }
-    }
-}
 
 fn main() {
     let (rl, thread) = raylib::init()
