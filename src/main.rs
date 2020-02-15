@@ -11,20 +11,40 @@ pub mod resources {
     use specs::{prelude::*, storage::HashMapStorage, WorldExt};
     use std::sync::{Arc, RwLock};
 
-    pub struct Raylib(pub Arc<RwLock<(RaylibHandle, RaylibThread)>>);
+    // TODO(cmc): shouldn't have a lock, ECS handles sync.
+    pub struct Raylib(pub Arc<RwLock<RaylibHandle>>);
     impl Raylib {
-        pub fn new(rl: RaylibHandle, thread: RaylibThread) -> Self {
-            Self(Arc::new(RwLock::new(rl, thread)))
+        pub fn new(rl: RaylibHandle) -> Self {
+            Self(Arc::new(RwLock::new(rl)))
         }
-    }
-    impl Clone for Raylib {
-        fn clone(&self) -> Self {
-            Self(Arc::clone(self.0))
+
+        pub fn read<T>(&self, mut f: impl FnMut(&RaylibHandle) -> T) -> T {
+            f(&*self.0.read().unwrap())
+        }
+
+        pub fn write<T>(&mut self, mut f: impl FnMut(&mut RaylibHandle) -> T) -> T {
+            f(&mut *self.0.write().unwrap())
+        }
+
+        pub fn draw(&mut self, tl: &RaylibThread, mut f: impl FnMut(&mut RaylibDrawHandle)) {
+            let mut guard = self.0.write().unwrap();
+            let mut d = guard.begin_drawing(tl);
+            f(&mut d)
         }
     }
 
+    impl Clone for Raylib {
+        fn clone(&self) -> Self {
+            Self(Arc::clone(&self.0))
+        }
+    }
+
+    // -----------------------------------------------------------------------------
+
     #[derive(Default)]
     pub struct DeltaTime(f32);
+
+    // -----------------------------------------------------------------------------
 
     // TODO(cmc): bitsets
     // TODO(cmc): portable design (i.e. abstract raylib)
@@ -38,24 +58,23 @@ pub mod resources {
     }
 
     impl MouseState {
-        pub fn new(rl: &RaylibHandle) -> Self {
-            let mut s = Self::default();
+        pub fn update(&mut self, rl: Raylib) {
+            use MouseButton::*;
+            rl.read(|rl| {
+                self.pos = (rl.get_mouse_x(), rl.get_mouse_y());
 
-            s.pos = (rl.get_mouse_x(), rl.get_mouse_y());
+                self.pressed[0] = rl.is_mouse_button_pressed(MOUSE_LEFT_BUTTON);
+                self.pressed[1] = rl.is_mouse_button_pressed(MOUSE_RIGHT_BUTTON);
+                self.pressed[2] = rl.is_mouse_button_pressed(MOUSE_MIDDLE_BUTTON);
 
-            s.pressed[0] = rl.is_mouse_button_pressed(MouseButton::MOUSE_LEFT_BUTTON);
-            s.pressed[1] = rl.is_mouse_button_pressed(MouseButton::MOUSE_RIGHT_BUTTON);
-            s.pressed[2] = rl.is_mouse_button_pressed(MouseButton::MOUSE_MIDDLE_BUTTON);
+                self.released[0] = rl.is_mouse_button_released(MOUSE_LEFT_BUTTON);
+                self.released[1] = rl.is_mouse_button_released(MOUSE_RIGHT_BUTTON);
+                self.released[2] = rl.is_mouse_button_released(MOUSE_MIDDLE_BUTTON);
 
-            s.released[0] = rl.is_mouse_button_released(MouseButton::MOUSE_LEFT_BUTTON);
-            s.released[1] = rl.is_mouse_button_released(MouseButton::MOUSE_RIGHT_BUTTON);
-            s.released[2] = rl.is_mouse_button_released(MouseButton::MOUSE_MIDDLE_BUTTON);
-
-            s.down[0] = rl.is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON);
-            s.down[1] = rl.is_mouse_button_down(MouseButton::MOUSE_RIGHT_BUTTON);
-            s.down[2] = rl.is_mouse_button_down(MouseButton::MOUSE_MIDDLE_BUTTON);
-
-            s
+                self.down[0] = rl.is_mouse_button_down(MOUSE_LEFT_BUTTON);
+                self.down[1] = rl.is_mouse_button_down(MOUSE_RIGHT_BUTTON);
+                self.down[2] = rl.is_mouse_button_down(MOUSE_MIDDLE_BUTTON);
+            });
         }
     }
 }
@@ -176,26 +195,31 @@ pub mod systems {
 
     impl<'a> System<'a> for Renderer {
         type SystemData = (
-            ReadExpect<'a, resources::Raylib>,
+            WriteExpect<'a, resources::Raylib>,
             ReadExpect<'a, super::Camera>,
             ReadStorage<'a, components::Pos3D>,
             ReadStorage<'a, components::Pos2D>,
             ReadStorage<'a, components::Dim2D>,
         );
 
-        fn run(&mut self, (mut d, cam, pos3Ds, pos2Ds, dim2Ds): Self::SystemData) {
-            let d = d.lol();
-            {
-                let mut d2 = d.begin_mode_3D(cam.deref().inner);
-                for pos in pos3Ds.join() {
-                    d2.draw_cube(pos.0, 2.0, 2.0, 2.0, Color::RED);
-                    d2.draw_cube_wires(pos.0, 2.0, 2.0, 2.0, Color::BLACK);
+        fn run(&mut self, (mut rl, cam, pos3Ds, pos2Ds, dim2Ds): Self::SystemData) {
+            let thread: RaylibThread = unsafe { std::mem::transmute(()) };
+            rl.draw(&thread, |d| {
+                d.clear_background(Color::DARKGRAY);
+
+                {
+                    let mut d2 = d.begin_mode_3D(cam.deref().inner);
+                    for pos in pos3Ds.join() {
+                        d2.draw_cube(pos.0, 2.0, 2.0, 2.0, Color::RED);
+                        d2.draw_cube_wires(pos.0, 2.0, 2.0, 2.0, Color::BLACK);
+                    }
                 }
-            }
-            for (&Pos2D(x, y), &Dim2D(w, h)) in (&pos2Ds, &dim2Ds).join() {
-                d.draw_rectangle(x, y, w, h, Color::GREEN.fade(0.1));
-                d.draw_rectangle_lines(x, y, w, h, Color::GREEN);
-            }
+
+                for (&Pos2D(x, y), &Dim2D(w, h)) in (&pos2Ds, &dim2Ds).join() {
+                    d.draw_rectangle(x, y, w, h, Color::GREEN.fade(0.1));
+                    d.draw_rectangle_lines(x, y, w, h, Color::GREEN);
+                }
+            });
         }
     }
 }
@@ -277,10 +301,23 @@ impl RawDrawHandle {
 }
 
 fn main() {
-    let (mut rl, thread) = raylib::init()
+    let (rl, thread) = raylib::init()
         .size(WINDOW_WIDTH, WINDOW_HEIGHT)
         .title("RTS")
         .build();
+
+    let mut world = World::new();
+    let mut dispatcher = DispatcherBuilder::new()
+        .with(systems::Selector::default(), "selector", &[])
+        .with_thread_local(systems::Renderer {})
+        .build();
+    dispatcher.setup(&mut world);
+
+    let mut rl = resources::Raylib::new(rl);
+    world.insert(rl.clone());
+
+    use resources::MouseState;
+    world.insert(MouseState::default());
 
     let mut cam = {
         let inner = Camera3D::perspective(
@@ -290,24 +327,17 @@ fn main() {
             60.0,
         );
 
-        rl.set_camera_mode(&inner, CameraMode::CAMERA_CUSTOM);
-        rl.set_target_fps(120);
+        rl.write(|rl| {
+            rl.set_camera_mode(&inner, CameraMode::CAMERA_CUSTOM);
+            rl.set_target_fps(120);
+        });
 
         let mut cam = Camera::new(inner);
         cam.update(0.0, (false, false, false, false), 0);
 
         cam
     };
-
-    let mut world = World::new();
-    let mut dispatcher = DispatcherBuilder::new()
-        .with(systems::Selector::default(), "selector", &[])
-        .with_thread_local(systems::Renderer {})
-        .build();
-    dispatcher.setup(&mut world);
-
-    use resources::MouseState;
-    world.insert(MouseState::default());
+    world.insert(cam.clone());
 
     for x in -10..=10 {
         for z in -10..=10 {
@@ -316,49 +346,44 @@ fn main() {
         }
     }
 
-    let rl = resources::Raylib::new(rl, thread);
-    world.insert(rl.clone()); // Arc
+    while !rl.read(|rl| rl.window_should_close()) {
+        let delta = rl.read(|rl| rl.get_frame_time() * 50.0);
+        let (swidth, sheight) = (rl.read(|rl| rl.get_screen_width() - 100), 40);
 
-    while !rl.window_should_close() {
-        let delta = rl.get_frame_time() * 50.0;
-        let (swidth, sheight) = (rl.get_screen_width() - 100, 40);
+        world.write_resource::<MouseState>().update(rl.clone());
 
-        let mouse_state = resources::MouseState::new(&rl);
-        *world.write_resource::<MouseState>() = mouse_state;
-
-        cam.update(
-            delta,
-            (
-                rl.is_key_down(KeyboardKey::KEY_A),
-                rl.is_key_down(KeyboardKey::KEY_W),
-                rl.is_key_down(KeyboardKey::KEY_D),
-                rl.is_key_down(KeyboardKey::KEY_S),
-            ),
-            rl.get_mouse_wheel_move(),
-        );
+        rl.read(|rl| {
+            cam.update(
+                delta,
+                (
+                    rl.is_key_down(KeyboardKey::KEY_A),
+                    rl.is_key_down(KeyboardKey::KEY_W),
+                    rl.is_key_down(KeyboardKey::KEY_D),
+                    rl.is_key_down(KeyboardKey::KEY_S),
+                ),
+                rl.get_mouse_wheel_move(),
+            )
+        });
 
         world.insert(cam.clone());
-        // let mut d = rl.begin_drawing(&thread);
-        // world.insert(RawDrawHandle(unsafe { std::mem::transmute(&mut d) }));
-
-        let mut d = rl.lock().unwrap().begin_drawing(&thread);
-        d.clear_background(Color::DARKGRAY);
 
         dispatcher.dispatch(&mut world);
         world.maintain();
 
-        d.draw_rectangle(10, 10, 220, 70, Color::SKYBLUE);
-        d.draw_rectangle_lines(10, 10, 220, 70, Color::BLUE);
-        d.draw_text(
-            "First person camera default controls:",
-            20,
-            20,
-            10,
-            Color::BLACK,
-        );
-        d.draw_text("- Move with keys: W, A, S, D", 40, 40, 10, Color::DARKGRAY);
-        d.draw_text("- Mouse move to look around", 40, 60, 10, Color::DARKGRAY);
+        rl.draw(&thread, |d| {
+            d.draw_rectangle(10, 10, 220, 70, Color::SKYBLUE);
+            d.draw_rectangle_lines(10, 10, 220, 70, Color::BLUE);
+            d.draw_text(
+                "First person camera default controls:",
+                20,
+                20,
+                10,
+                Color::BLACK,
+            );
+            d.draw_text("- Move with keys: W, A, S, D", 40, 40, 10, Color::DARKGRAY);
+            d.draw_text("- Mouse move to look around", 40, 60, 10, Color::DARKGRAY);
 
-        d.draw_fps(swidth, sheight);
+            d.draw_fps(swidth, sheight);
+        });
     }
 }
