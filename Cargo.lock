@@ -427,9 +427,9 @@ checksum = "60302e4db3a61da70c0cb7991976248362f30319e88850c487b9b95bbf059e00"
 
 [[package]]
 name = "memchr"
-version = "2.3.0"
+version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3197e20c7edb283f87c071ddfc7a2cca8f8e0b888c242959846a6fce03c72223"
+checksum = "53445de381a1f436797497c61d851644d0e8e88e6140f22872ad33a704933978"
 
 [[package]]
 name = "memoffset"
@@ -605,8 +605,8 @@ dependencies = [
 
 [[package]]
 name = "raylib"
-version = "1.0.0"
-source = "git+https://github.com/deltaphc/raylib-rs#5c676b29b4d93103d1df4de82455ed6c3f4a30e0"
+version = "1.0.1"
+source = "git+https://github.com/deltaphc/raylib-rs#319d5ac8bbb91722a4ed4ae00945a790cb33a052"
 dependencies = [
  "lazy_static 1.4.0",
  "libc",
@@ -616,7 +616,7 @@ dependencies = [
 [[package]]
 name = "raylib-sys"
 version = "1.0.0"
-source = "git+https://github.com/deltaphc/raylib-rs#5c676b29b4d93103d1df4de82455ed6c3f4a30e0"
+source = "git+https://github.com/deltaphc/raylib-rs#319d5ac8bbb91722a4ed4ae00945a790cb33a052"
 dependencies = [
  "cc",
  "cmake",
@@ -766,9 +766,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.47"
+version = "1.0.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15913895b61e0be854afd32fd4163fcd2a3df34142cf2cb961b310ce694cbf90"
+checksum = "9371ade75d4c2d6cb154141b9752cf3781ec9c05e0e5cf35060e1e70ee7b9c25"
 dependencies = [
  "itoa",
  "ryu",
@@ -834,13 +834,13 @@ dependencies = [
 
 [[package]]
 name = "specs-derive"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a63549fa0d4a6f76e99e6634c328f25d0c9fa8ad6f8498aef74f6c35c0b269e5"
+checksum = "3e23e09360f3d2190fec4222cd9e19d3158d5da948c0d1ea362df617dd103511"
 dependencies = [
- "proc-macro2 0.4.30",
- "quote 0.6.13",
- "syn 0.15.44",
+ "proc-macro2 1.0.8",
+ "quote 1.0.2",
+ "syn 1.0.14",
 ]
 
 [[package]]
