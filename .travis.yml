@@ -11,9 +11,10 @@ before_script:
   - (test -x $HOME/.cargo/bin/cargo-install-update || cargo install cargo-update)
   - (test -x $HOME/.cargo/bin/cargo-web || cargo install cargo-web)
   - cargo install-update -a
+  - ./ci/emsdk.sh
 
 script:
-  - make web-deploy
+  - source ./emsdk_env.sh && make web-deploy
 
 deploy:
   provider: pages
