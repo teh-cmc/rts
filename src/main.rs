@@ -15,6 +15,7 @@ pub mod resources {
         sync::{Arc, RwLock},
     };
 
+    // TODO(cmc): explain
     pub struct Raylib(Arc<UnsafeCell<RaylibHandle>>);
     unsafe impl Send for Raylib {}
     unsafe impl Sync for Raylib {}
