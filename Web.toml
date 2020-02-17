@@ -1,0 +1,27 @@
+default-target = "wasm32-unknown-emscripten"
+
+# This will prepend a given JavaScript file to the resulting `.js` artifact.
+# You can put any initialization code here which you'd like to have executed
+# when your `.js` file first loads.
+#
+# This accepts either a string (as shown here), or an array of strings,
+# in which case it will prepend all of the specified files in their
+# order of appearance.
+# prepend-js = "src/shell.js"
+
+[cargo-web]
+minimum-version = "0.6.0"
+
+[target.emscripten]
+link-args = [
+    "-O2",
+    "-s", "ALLOW_MEMORY_GROWTH=1",
+    "-s", "ASSERTIONS=0",
+    "-s", "ASYNCIFY",
+    "-s", "DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=0",
+    "-s", "EMTERPRETIFY=0",
+    "-s", "EMTERPRETIFY_ASYNC=0",
+    "-s", "USE_GLFW=3",
+    "-s", "USE_PTHREADS=0",
+    "-s", "WASM=1",
+]
