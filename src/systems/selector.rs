@@ -47,10 +47,21 @@ impl<'a> System<'a> for Selector {
                     self.state = SelectorState::Selecting(e, pos);
                 }
             }
-            SelectorState::Selecting(e, pos2) => {
-                let pos1 = mouse.position();
-                let dim = pos1 - pos2;
+            SelectorState::Selecting(e, mut pos1) => {
+                let mut pos2 = mouse.position();
+                let mut dim = pos2 - pos1;
+                if dim.x.is_negative() {
+                    dim.x = dim.x.abs();
+                    std::mem::swap(&mut pos1.x, &mut pos2.x);
+                }
+                if dim.y.is_negative() {
+                    dim.y = dim.y.abs();
+                    std::mem::swap(&mut pos1.y, &mut pos2.y);
+                }
+
+                *pos2Ds.get_mut(e).unwrap() = pos1.into();
                 dim2Ds.insert(e, dim.into()).unwrap();
+
                 if mouse.is_released(0) {
                     self.state = SelectorState::Confirmed(e);
                 }
