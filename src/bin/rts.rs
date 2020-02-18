@@ -58,10 +58,16 @@ fn main() {
     };
     world.insert(cam);
 
+    use components::Vec3D;
     for x in -10..=10 {
         for z in -10..=10 {
-            let pos: Vector3 = (x as f32 * 4.0, 0.0, z as f32 * 4.0).into();
-            world.create_entity().with(components::Pos3D(pos)).build();
+            let pos: Vec3D = (x as f32 * 4.0, 0.0, z as f32 * 4.0).into();
+            let dim: Vec3D = (2.0, 2.0, 2.0).into();
+            world
+                .create_entity()
+                .with(components::Pos3D(pos))
+                .with(components::Dim3D(dim))
+                .build();
         }
     }
 

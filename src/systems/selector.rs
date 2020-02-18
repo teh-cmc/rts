@@ -1,12 +1,14 @@
 use crate::{components, resources};
-
+use cgmath::prelude::*;
+use components::Vec2D;
+use raylib::prelude::*;
 use specs::prelude::*;
 
 // -----------------------------------------------------------------------------
 
 enum SelectorState {
     Idle,
-    Selecting(Entity, components::Pos2D),
+    Selecting(Entity, Vec2D),
     Confirmed(Entity),
 }
 
@@ -33,19 +35,22 @@ impl<'a> System<'a> for Selector {
     );
 
     fn run(&mut self, sys_data: Self::SystemData) {
-        let (entities, _cam, mouse, _positions, mut pos2Ds, mut dim2Ds) = sys_data;
+        let (entities, cam, mouse, pos3Ds, mut pos2Ds, mut dim2Ds) = sys_data;
         match self.state {
             SelectorState::Idle => {
                 if mouse.is_pressed(0) {
                     let pos = mouse.position();
-                    let e = entities.build_entity().with(pos, &mut pos2Ds).build();
+                    let e = entities
+                        .build_entity()
+                        .with(pos.into(), &mut pos2Ds)
+                        .build();
                     self.state = SelectorState::Selecting(e, pos);
                 }
             }
-            SelectorState::Selecting(e, _upper_left @ components::Pos2D(x1, y1)) => {
-                let pos = mouse.position();
-                let dim = components::Dim2D(pos.0 - x1, pos.1 - y1);
-                dim2Ds.insert(e, dim).unwrap();
+            SelectorState::Selecting(e, pos2) => {
+                let pos1 = mouse.position();
+                let dim = pos1 - pos2;
+                dim2Ds.insert(e, dim.into()).unwrap();
                 if mouse.is_released(0) {
                     self.state = SelectorState::Confirmed(e);
                 }
@@ -53,6 +58,8 @@ impl<'a> System<'a> for Selector {
             SelectorState::Confirmed(e) => {
                 entities.delete(e).unwrap();
                 self.state = SelectorState::Idle;
+
+                // for components::Pos3D(pos) in pos3Ds.join() {}
             }
         }
     }

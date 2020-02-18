@@ -12,11 +12,12 @@ impl<'a> System<'a> for Renderer {
         WriteExpect<'a, resources::Raylib>,
         ReadExpect<'a, resources::Camera>,
         ReadStorage<'a, components::Pos3D>,
+        ReadStorage<'a, components::Dim3D>,
         ReadStorage<'a, components::Pos2D>,
         ReadStorage<'a, components::Dim2D>,
     );
 
-    fn run(&mut self, (mut rl, cam, pos3Ds, pos2Ds, dim2Ds): Self::SystemData) {
+    fn run(&mut self, (mut rl, cam, pos3Ds, dim3Ds, pos2Ds, dim2Ds): Self::SystemData) {
         // TODO(cmc): safety note.
         let thread: RaylibThread = unsafe { std::mem::transmute(()) };
         let (swidth, sheight) = (rl.read(|rl| rl.get_screen_width() - 100), 40);
@@ -25,16 +26,18 @@ impl<'a> System<'a> for Renderer {
 
             {
                 let mut d2 = d.begin_mode_3D(cam.raw());
-                for pos in pos3Ds.join() {
-                    d2.draw_cube(pos.0, 2.0, 2.0, 2.0, Color::RED);
-                    d2.draw_cube_wires(pos.0, 2.0, 2.0, 2.0, Color::BLACK);
+                for (&pos, &dim) in (&pos3Ds, &dim3Ds).join() {
+                    let pos: Vector3 = pos.into();
+                    let dim: Vector3 = dim.into();
+                    d2.draw_cube(pos, dim.x, dim.y, dim.z, Color::RED);
+                    d2.draw_cube_wires(pos, dim.x, dim.y, dim.z, Color::BLACK);
                 }
             }
 
             use components::{Dim2D, Pos2D};
-            for (&Pos2D(x, y), &Dim2D(w, h)) in (&pos2Ds, &dim2Ds).join() {
-                d.draw_rectangle(x, y, w, h, Color::GREEN.fade(0.1));
-                d.draw_rectangle_lines(x, y, w, h, Color::GREEN);
+            for (&Pos2D(pos), &Dim2D(dim)) in (&pos2Ds, &dim2Ds).join() {
+                d.draw_rectangle(pos.x, pos.y, dim.x, dim.y, Color::GREEN.fade(0.1));
+                d.draw_rectangle_lines(pos.x, pos.y, dim.x, dim.y, Color::GREEN);
             }
 
             d.draw_rectangle(10, 10, 220, 70, Color::SKYBLUE);

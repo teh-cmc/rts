@@ -1,1 +1,10 @@
-/target
+**/.idea/
+**/target/
+*.sw*
+*~
+.DS_Store
+libs/
+perf.*
+.gdb*
+cargo-cache/
+cargo-target/

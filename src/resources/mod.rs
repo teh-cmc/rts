@@ -1,8 +1,9 @@
+mod bounding_tree;
 mod camera;
 mod mouse;
 mod raylib;
 
-pub use self::{camera::Camera, mouse::MouseState, raylib::Raylib};
+pub use self::{bounding_tree::BoundingTree, camera::Camera, mouse::MouseState, raylib::Raylib};
 
 // -----------------------------------------------------------------------------
 

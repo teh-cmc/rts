@@ -1,22 +1,31 @@
 use crate::{components, resources::Raylib};
-use raylib::prelude::*;
+use components::Vec2D;
 
 // -----------------------------------------------------------------------------
 
 // TODO(cmc): bitsets
 // TODO(cmc): portable design (i.e. abstract raylib)
-#[derive(Default)]
 pub struct MouseState {
-    pos: (i32, i32),
-
+    pos: Vec2D,
     pressed: [bool; 8],
     released: [bool; 8],
     down: [bool; 8],
 }
 
+impl Default for MouseState {
+    fn default() -> Self {
+        Self {
+            pos: (0, 0).into(),
+            pressed: Default::default(),
+            released: Default::default(),
+            down: Default::default(),
+        }
+    }
+}
+
 impl MouseState {
-    pub fn position(&self) -> components::Pos2D {
-        self.pos.into()
+    pub fn position(&self) -> Vec2D {
+        self.pos
     }
 
     pub fn is_pressed(&self, button: usize) -> bool {
@@ -32,9 +41,10 @@ impl MouseState {
     }
 
     pub fn update(&mut self, rl: &Raylib) {
+        use raylib::prelude::*;
         use MouseButton::*;
         rl.read(|rl| {
-            self.pos = (rl.get_mouse_x(), rl.get_mouse_y());
+            self.pos = (rl.get_mouse_x(), rl.get_mouse_y()).into();
 
             self.pressed[0] = rl.is_mouse_button_pressed(MOUSE_LEFT_BUTTON);
             self.pressed[1] = rl.is_mouse_button_pressed(MOUSE_RIGHT_BUTTON);

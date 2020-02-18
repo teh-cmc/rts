@@ -9,10 +9,12 @@ default = []
 parallel = ["specs/parallel"]
 
 [dependencies]
+# raylib = { path = "../../deltaphc/raylib-rs/raylib" }
 arr_macro = "0.1"
+cgmath = "0.17"
+collision = "0.20"
 rand = "0.7"
 raylib = { git = "https://github.com/deltaphc/raylib-rs", branch = "master" }
-# raylib = { path = "../../deltaphc/raylib-rs/raylib" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 specs = { version = "0.15", default-features = false }

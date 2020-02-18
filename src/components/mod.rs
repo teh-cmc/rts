@@ -1,35 +1,93 @@
-use raylib::prelude::*;
+use cgmath::{prelude::*, Vector2, Vector3};
 use specs::{prelude::*, storage::HashMapStorage};
 
 // -----------------------------------------------------------------------------
 
-#[derive(Clone, Debug)]
-pub struct Pos3D(pub Vector3);
+pub type Vec2D = Vector2<i32>;
+
+#[derive(Clone, Copy, Debug)]
+pub struct Pos2D(pub Vec2D);
+
+impl Component for Pos2D {
+    type Storage = HashMapStorage<Self>;
+}
+
+impl From<Vec2D> for Pos2D {
+    fn from(pos: Vec2D) -> Self {
+        Self(pos)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Dim2D(pub Vec2D);
+
+impl Component for Dim2D {
+    type Storage = HashMapStorage<Self>;
+}
+
+impl From<Vec2D> for Dim2D {
+    fn from(dim: Vec2D) -> Self {
+        Self(dim)
+    }
+}
+
+// TODO(cmc): kill these?
+use raylib::core::math::Vector2 as RayVector2;
+impl Into<RayVector2> for Pos2D {
+    fn into(self) -> RayVector2 {
+        RayVector2::new(self.0.x as f32, self.0.y as f32)
+    }
+}
+impl Into<RayVector2> for Dim2D {
+    fn into(self) -> RayVector2 {
+        RayVector2::new(self.0.x as f32, self.0.y as f32)
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+pub type Vec3D = Vector3<f32>;
+
+#[derive(Clone, Copy, Debug)]
+pub struct Pos3D(pub Vec3D);
+
 impl Component for Pos3D {
     type Storage = VecStorage<Self>;
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct Pos2D(pub i32, pub i32);
-impl Component for Pos2D {
-    type Storage = HashMapStorage<Self>;
-}
-impl From<(i32, i32)> for Pos2D {
-    fn from((x, y): (i32, i32)) -> Self {
-        Self(x, y)
+impl From<Vec3D> for Pos3D {
+    fn from(pos: Vec3D) -> Self {
+        Self(pos)
     }
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct Dim2D(pub i32, pub i32);
-impl Component for Dim2D {
-    type Storage = HashMapStorage<Self>;
+pub struct Dim3D(pub Vec3D);
+
+impl Component for Dim3D {
+    type Storage = VecStorage<Self>;
 }
-impl From<(i32, i32)> for Dim2D {
-    fn from((x, y): (i32, i32)) -> Self {
-        Self(x, y)
+
+impl From<Vec3D> for Dim3D {
+    fn from(dim: Vec3D) -> Self {
+        Self(dim)
     }
 }
+
+// TODO(cmc): kill these?
+use raylib::core::math::Vector3 as RayVector3;
+impl Into<RayVector3> for Pos3D {
+    fn into(self) -> RayVector3 {
+        RayVector3::new(self.0.x, self.0.y, self.0.z)
+    }
+}
+impl Into<RayVector3> for Dim3D {
+    fn into(self) -> RayVector3 {
+        RayVector3::new(self.0.x, self.0.y, self.0.z)
+    }
+}
+
+// -----------------------------------------------------------------------------
 
 #[derive(Default, Debug)]
 pub struct Selected;
