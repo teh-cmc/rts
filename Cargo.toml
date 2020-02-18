@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["Clement Rey <cr.rey.clement@gmail.com>"]
 edition = "2018"
 
+[features]
+default = []
+parallel = ["specs/parallel"]
+
 [dependencies]
 arr_macro = "0.1"
 rand = "0.7"

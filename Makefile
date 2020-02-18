@@ -1,7 +1,7 @@
 .PHONY: desktop web
 
 desktop:
-	cargo run --release
+	cargo run --release --features parallel
 
 web:
 	cargo web start --release --use-system-emscripten --host 0.0.0.0
