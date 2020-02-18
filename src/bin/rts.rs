@@ -24,12 +24,15 @@ fn main() {
         let cam_id = sys_id(&cam);
         let selector = systems::Selector::default();
         let selector_id = sys_id(&selector);
+        let bounding_tree = systems::BoundingTree::default();
+        let bounding_tree_id = sys_id(&bounding_tree);
         let renderer = systems::Renderer::default();
 
         DispatcherBuilder::new()
             .with(mouse, mouse_id, &[])
             .with(cam, cam_id, &[])
-            .with(selector, selector_id, &[mouse_id])
+            .with(bounding_tree, bounding_tree_id, &[])
+            .with(selector, selector_id, &[mouse_id, bounding_tree_id])
             .with_thread_local(renderer)
             .build()
     };
@@ -40,6 +43,7 @@ fn main() {
 
     world.insert(resources::DeltaTime(0.0));
     world.insert(resources::MouseState::default());
+    world.insert(resources::BoundingTree::new());
 
     let cam = {
         let inner = Camera3D::perspective(
@@ -67,6 +71,7 @@ fn main() {
                 .create_entity()
                 .with(components::Pos3D(pos))
                 .with(components::Dim3D(dim))
+                .with(components::Pos3DInvalidated)
                 .build();
         }
     }

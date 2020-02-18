@@ -7,7 +7,6 @@ pub type Vec2D = Vector2<i32>;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Pos2D(pub Vec2D);
-
 impl Component for Pos2D {
     type Storage = HashMapStorage<Self>;
 }
@@ -18,9 +17,14 @@ impl From<Vec2D> for Pos2D {
     }
 }
 
+#[derive(Default, Debug)]
+pub struct Pos2DInvalidated;
+impl Component for Pos2DInvalidated {
+    type Storage = NullStorage<Self>;
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Dim2D(pub Vec2D);
-
 impl Component for Dim2D {
     type Storage = HashMapStorage<Self>;
 }
@@ -29,6 +33,12 @@ impl From<Vec2D> for Dim2D {
     fn from(dim: Vec2D) -> Self {
         Self(dim)
     }
+}
+
+#[derive(Default, Debug)]
+pub struct Dim2DInvalidated;
+impl Component for Dim2DInvalidated {
+    type Storage = NullStorage<Self>;
 }
 
 // TODO(cmc): kill these?
@@ -50,7 +60,6 @@ pub type Vec3D = Vector3<f32>;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Pos3D(pub Vec3D);
-
 impl Component for Pos3D {
     type Storage = VecStorage<Self>;
 }
@@ -61,9 +70,14 @@ impl From<Vec3D> for Pos3D {
     }
 }
 
+#[derive(Default, Debug)]
+pub struct Pos3DInvalidated;
+impl Component for Pos3DInvalidated {
+    type Storage = NullStorage<Self>;
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Dim3D(pub Vec3D);
-
 impl Component for Dim3D {
     type Storage = VecStorage<Self>;
 }
@@ -72,6 +86,12 @@ impl From<Vec3D> for Dim3D {
     fn from(dim: Vec3D) -> Self {
         Self(dim)
     }
+}
+
+#[derive(Default, Debug)]
+pub struct Dim3DInvalidated;
+impl Component for Dim3DInvalidated {
+    type Storage = NullStorage<Self>;
 }
 
 // TODO(cmc): kill these?
