@@ -2,10 +2,10 @@
 
 Building an RTS the old way, with Rust, Raylib & Emscripten.
 
-Live demo: [click here]()
+Live demo: [click here]() (not working yet!)
 
 ## Usage
 
 ```
-cargo run --release
+make desktop
 ```

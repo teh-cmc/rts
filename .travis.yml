@@ -14,7 +14,7 @@ before_script:
   - ./ci/emsdk.sh
 
 script:
-  - source ./emsdk_env.sh && make web-deploy
+  - source ./emsdk/emsdk_env.sh && make web-deploy
 
 deploy:
   provider: pages
