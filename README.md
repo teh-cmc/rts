@@ -2,7 +2,7 @@
 
 Building an RTS the old way, with Rust, Raylib & Emscripten.
 
-Live demo: [click here]() (not working yet!)
+Live demo: [click here](https://teh-cmc.github.io/rts/index.html)
 
 ## Usage
 
