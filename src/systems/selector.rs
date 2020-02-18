@@ -29,13 +29,14 @@ impl<'a> System<'a> for Selector {
         Entities<'a>,
         ReadExpect<'a, resources::Camera>,
         ReadExpect<'a, resources::MouseState>,
+        ReadExpect<'a, resources::BoundingTree>,
         ReadStorage<'a, components::Pos3D>,
         WriteStorage<'a, components::Pos2D>,
         WriteStorage<'a, components::Dim2D>,
     );
 
     fn run(&mut self, sys_data: Self::SystemData) {
-        let (entities, cam, mouse, pos3Ds, mut pos2Ds, mut dim2Ds) = sys_data;
+        let (entities, cam, mouse, bt, pos3Ds, mut pos2Ds, mut dim2Ds) = sys_data;
         match self.state {
             SelectorState::Idle => {
                 if mouse.is_pressed(0) {

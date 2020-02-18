@@ -19,10 +19,12 @@ impl<'a> System<'a> for BoundingTree {
     fn run(&mut self, (entities, mut bt, pos3Ds, dim3Ds, mut moved): Self::SystemData) {
         for (e, pos, dim, _) in (&entities, &pos3Ds, &dim3Ds, &moved).join() {
             eprintln!("{:?} invalidated", e);
+            bt.update_entity(e, pos.0, dim.0);
         }
+        bt.refresh();
+
         for e in entities.join() {
             moved.remove(e);
         }
-        bt.update();
     }
 }
