@@ -48,7 +48,17 @@ impl Into<RayVector2> for Pos2D {
         RayVector2::new(self.0.x as f32, self.0.y as f32)
     }
 }
+impl Into<RayVector2> for &Pos2D {
+    fn into(self) -> RayVector2 {
+        RayVector2::new(self.0.x as f32, self.0.y as f32)
+    }
+}
 impl Into<RayVector2> for Dim2D {
+    fn into(self) -> RayVector2 {
+        RayVector2::new(self.0.x as f32, self.0.y as f32)
+    }
+}
+impl Into<RayVector2> for &Dim2D {
     fn into(self) -> RayVector2 {
         RayVector2::new(self.0.x as f32, self.0.y as f32)
     }
@@ -101,7 +111,17 @@ impl Into<RayVector3> for Pos3D {
         RayVector3::new(self.0.x, self.0.y, self.0.z)
     }
 }
+impl Into<RayVector3> for &Pos3D {
+    fn into(self) -> RayVector3 {
+        RayVector3::new(self.0.x, self.0.y, self.0.z)
+    }
+}
 impl Into<RayVector3> for Dim3D {
+    fn into(self) -> RayVector3 {
+        RayVector3::new(self.0.x, self.0.y, self.0.z)
+    }
+}
+impl Into<RayVector3> for &Dim3D {
     fn into(self) -> RayVector3 {
         RayVector3::new(self.0.x, self.0.y, self.0.z)
     }

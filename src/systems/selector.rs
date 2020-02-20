@@ -1,7 +1,7 @@
 use crate::{components, resources};
 use cgmath::prelude::*;
 use components::Vec2D;
-use raylib::prelude::*;
+// use raylib::prelude::*;
 use specs::prelude::*;
 
 // -----------------------------------------------------------------------------
@@ -9,7 +9,7 @@ use specs::prelude::*;
 enum SelectorState {
     Idle,
     Selecting(Entity, Vec2D),
-    Confirmed(Entity),
+    Confirmed(Entity, Vec2D, Vec2D),
 }
 
 pub struct Selector {
@@ -27,6 +27,7 @@ impl Default for Selector {
 impl<'a> System<'a> for Selector {
     type SystemData = (
         Entities<'a>,
+        ReadExpect<'a, resources::Raylib>,
         ReadExpect<'a, resources::Camera>,
         ReadExpect<'a, resources::MouseState>,
         ReadExpect<'a, resources::BoundingTree>,
@@ -36,7 +37,7 @@ impl<'a> System<'a> for Selector {
     );
 
     fn run(&mut self, sys_data: Self::SystemData) {
-        let (entities, cam, mouse, bt, pos3Ds, mut pos2Ds, mut dim2Ds) = sys_data;
+        let (entities, rl, cam, mouse, bt, pos3Ds, mut pos2Ds, mut dim2Ds) = sys_data;
         match self.state {
             SelectorState::Idle => {
                 if mouse.is_pressed(0) {
@@ -64,14 +65,12 @@ impl<'a> System<'a> for Selector {
                 dim2Ds.insert(e, dim.into()).unwrap();
 
                 if mouse.is_released(0) {
-                    self.state = SelectorState::Confirmed(e);
+                    self.state = SelectorState::Confirmed(e, pos1, pos2);
                 }
             }
-            SelectorState::Confirmed(e) => {
+            SelectorState::Confirmed(e, pos, dim) => {
                 entities.delete(e).unwrap();
                 self.state = SelectorState::Idle;
-
-                // for components::Pos3D(pos) in pos3Ds.join() {}
             }
         }
     }

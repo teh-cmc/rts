@@ -1,4 +1,7 @@
-use crate::resources::{DeltaTime, Raylib};
+use crate::{
+    components,
+    resources::{DeltaTime, Raylib},
+};
 use raylib::prelude::*;
 use specs::{prelude::*, WorldExt};
 
@@ -28,6 +31,22 @@ impl Camera {
 
     pub fn raw(&self) -> Camera3D {
         self.inner
+    }
+
+    pub fn set_pos(&mut self, rl: &Raylib, pos: components::Pos3D) -> components::Pos3D {
+        let pos_old = components::Vec3D::from((
+            self.inner.position.x,
+            self.inner.position.y,
+            self.inner.position.z,
+        ))
+        .into();
+        self.inner.position = pos.into();
+        self.inner.target = Vector3::new(
+            self.inner.position.x + self.radius * self.x_rad.sin() * self.y_rad.cos(),
+            self.inner.position.y + self.radius * self.y_rad.sin(),
+            self.inner.position.z + self.radius * self.x_rad.cos() * self.y_rad.cos(),
+        );
+        pos_old
     }
 
     // https://gamedev.stackexchange.com/a/159314

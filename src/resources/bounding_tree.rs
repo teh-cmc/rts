@@ -4,11 +4,12 @@ use crate::{
 };
 use cgmath::Point3;
 use collision::{
-    dbvt::{DynamicBoundingVolumeTree, TreeValue},
+    dbvt::{DynamicBoundingVolumeTree, FrustumVisitor, TreeValue},
     prelude::*,
-    Aabb3,
+    Aabb3, Frustum,
 };
 use specs::{prelude::*, WorldExt};
+use std::{cell::UnsafeCell, collections::HashMap};
 
 // -----------------------------------------------------------------------------
 
@@ -42,16 +43,35 @@ impl TreeValue for BoundingValue {
 #[derive(Debug)]
 pub struct BoundingTree {
     inner: DynamicBoundingVolumeTree<BoundingValue>,
+    entity_mappings: HashMap<Entity, usize>,
 }
 
 impl BoundingTree {
     pub fn new() -> Self {
         let inner = DynamicBoundingVolumeTree::new();
-        Self { inner }
+        let entity_mappings = HashMap::with_capacity(8192);
+        Self {
+            inner,
+            entity_mappings,
+        }
     }
 
     pub fn update_entity(&mut self, e: Entity, pos: Vec3D, dim: Vec3D) {
-        self.inner.insert(BoundingValue::new(e, pos, dim));
+        let this = UnsafeCell::new(self);
+        let mutself = move || -> &mut Self { unsafe { *this.get() } };
+        mutself()
+            .entity_mappings
+            .entry(e)
+            .and_modify(|idx| {
+                mutself()
+                    .inner
+                    .update_node(*idx, BoundingValue::new(e, pos, dim))
+            })
+            .or_insert_with(|| mutself().inner.insert(BoundingValue::new(e, pos, dim)));
+    }
+
+    pub fn within_frustrum(&self, frustrum: &Frustum<f32>) -> Vec<Entity> {
+        Vec::new()
     }
 
     pub fn refresh(&mut self) {
