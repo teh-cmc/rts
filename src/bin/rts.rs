@@ -55,7 +55,6 @@ fn main() {
 
         rl.write(|rl| {
             rl.set_camera_mode(&inner, CameraMode::CAMERA_CUSTOM);
-            rl.set_target_fps(120);
         });
 
         resources::Camera::new(inner)
@@ -76,11 +75,69 @@ fn main() {
         }
     }
 
-    while !rl.read(|rl| rl.window_should_close()) {
-        let delta = rl.read(|rl| rl.get_frame_time() * 50.0);
-        world.write_resource::<resources::DeltaTime>().0 = delta;
+    #[cfg(target_os = "emscripten")]
+    unsafe {
+        // TODO(cmc): Not sure why but hours of debugging have shown that I need
+        // to yield back one time to the browser event-loop before gettings the
+        // real stuff going...
+        emscripten::emscripten_sleep(1);
 
-        dispatcher.dispatch(&mut world);
-        world.maintain();
+        let mut main_loop = move || {
+            let delta = rl.read(|rl| rl.get_frame_time() * 50.0);
+            world.write_resource::<resources::DeltaTime>().0 = delta;
+
+            dispatcher.dispatch(&mut world);
+            world.maintain();
+        };
+        let (callback, args) = emscripten::trampoline(&mut main_loop);
+        emscripten::emscripten_set_main_loop_arg(callback, args, 0, 1);
+    }
+
+    #[cfg(not(target_os = "emscripten"))]
+    {
+        rl.write(|rl| rl.set_target_fps(120));
+        while !rl.read(|rl| rl.window_should_close()) {
+            let delta = rl.read(|rl| rl.get_frame_time() * 50.0);
+            world.write_resource::<resources::DeltaTime>().0 = delta;
+
+            dispatcher.dispatch(&mut world);
+            world.maintain();
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+#[cfg(target_os = "emscripten")]
+mod emscripten {
+    use std::ffi::c_void;
+
+    type EmscriptenCallback = extern "C" fn(*mut c_void);
+    type EmscriptenCallbackArgs = *mut c_void;
+
+    extern "C" {
+        pub fn emscripten_set_main_loop(callback: EmscriptenCallback, fps: isize, loopy: isize);
+        pub fn emscripten_set_main_loop_arg(
+            callback: EmscriptenCallback,
+            arg: EmscriptenCallbackArgs,
+            fps: isize,
+            loopy: isize,
+        );
+        pub fn emscripten_sleep(ms: usize);
+    }
+
+    pub unsafe fn trampoline<F>(closure: &mut F) -> (EmscriptenCallback, EmscriptenCallbackArgs)
+    where
+        F: FnMut(),
+    {
+        extern "C" fn trampoline<F>(args: EmscriptenCallbackArgs)
+        where
+            F: FnMut(),
+        {
+            let closure: &mut F = unsafe { &mut *(args as *mut F) };
+            (*closure)();
+        }
+
+        (trampoline::<F>, closure as *mut F as EmscriptenCallbackArgs)
     }
 }

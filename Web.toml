@@ -18,10 +18,13 @@ link-args = [
     "-s", "ALLOW_MEMORY_GROWTH=1",
     "-s", "ASSERTIONS=0",
     "-s", "ASYNCIFY",
+    # "-s", "ASYNCIFY_IGNORE_INDIRECT",
+    # "-s", "ASYNCIFY_WHITELIST=_emscripten_*,emscripten_*",
     "-s", "DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=0",
     "-s", "EMTERPRETIFY=0",
     "-s", "EMTERPRETIFY_ASYNC=0",
     "-s", "USE_GLFW=3",
     "-s", "USE_PTHREADS=0",
     "-s", "WASM=1",
+    "-s", "WASM_MEM_MAX=1073741824",
 ]

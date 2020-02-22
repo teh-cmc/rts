@@ -17,8 +17,10 @@ rand = "0.7"
 raylib = { git = "https://github.com/deltaphc/raylib-rs", branch = "master" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-## TODO(cmc): latest `specs` (0.16+) breaks emscripten
-specs = { version = "0.15", default-features = false }
+specs = { version = "0.16", default-features = false }
 specs-derive = "0.4"
 structopt = "0.2"
 tcod = "0.15"
+
+[patch.crates-io]
+tynm = { git = "https://github.com/teh-cmc/tynm", branch = "master" }
