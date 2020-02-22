@@ -55,6 +55,7 @@ fn main() {
 
         rl.write(|rl| {
             rl.set_camera_mode(&inner, CameraMode::CAMERA_CUSTOM);
+            rl.hide_cursor();
         });
 
         resources::Camera::new(inner)
