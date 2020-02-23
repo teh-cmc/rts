@@ -134,7 +134,7 @@ impl<'a> System<'a> for Selector {
                     let pleft = Plane::from_points(r1.origin, r4.origin, r1far.origin).unwrap();
                     let pright = {
                         let mut pright = pleft;
-                        pright.d -= 1000.0;
+                        pright.d += 1000.0;
                         pright
                     };
                     // let pright = Plane::from_points(r2.origin, r3.origin, r2far.origin).unwrap();

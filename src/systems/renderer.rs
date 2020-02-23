@@ -39,8 +39,15 @@ impl<'a> System<'a> for Renderer {
                     } else {
                         Color::RED
                     };
-                    d2.draw_cube(pos, dim.x, dim.y, dim.z, col);
-                    d2.draw_cube_wires(pos, dim.x, dim.y, dim.z, Color::BLACK);
+                    // NOTE(cmc): Raylib draws cube from their center of
+                    // gravity, not their corner, i.e.:
+                    // rlVertex3f(x + width/2, y + height/2, z - length/2);
+                    // rlVertex3f(x + width/2, y - height/2, z - length/2);
+                    // rlVertex3f(x - width/2, y + height/2, z - length/2);
+                    //
+                    // Hence `pos + dim / 2.0`.
+                    d2.draw_cube(pos + dim / 2.0, dim.x, dim.y, dim.z, col);
+                    d2.draw_cube_wires(pos + dim / 2.0, dim.x, dim.y, dim.z, Color::BLACK);
                 }
             }
 
