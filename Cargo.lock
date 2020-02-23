@@ -836,7 +836,7 @@ dependencies = [
 [[package]]
 name = "raylib"
 version = "1.0.1"
-source = "git+https://github.com/deltaphc/raylib-rs#319d5ac8bbb91722a4ed4ae00945a790cb33a052"
+source = "git+https://github.com/teh-cmc/raylib-rs?branch=cmc/raylib26#e2c9b9fd0bf30c04fff199f690a5732a91b77f90"
 dependencies = [
  "lazy_static 1.4.0",
  "libc",
@@ -846,7 +846,7 @@ dependencies = [
 [[package]]
 name = "raylib-sys"
 version = "1.0.0"
-source = "git+https://github.com/deltaphc/raylib-rs#319d5ac8bbb91722a4ed4ae00945a790cb33a052"
+source = "git+https://github.com/teh-cmc/raylib-rs?branch=cmc/raylib26#e2c9b9fd0bf30c04fff199f690a5732a91b77f90"
 dependencies = [
  "cc",
  "cmake",

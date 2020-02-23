@@ -2,11 +2,13 @@ use crate::{
     components::Vec3D,
     resources::{DeltaTime, Raylib},
 };
-use cgmath::Point3;
+use cgmath::{Point3, Vector3};
 use collision::{
-    dbvt::{DynamicBoundingVolumeTree, FrustumVisitor, TreeValue},
+    dbvt::{
+        ContinuousVisitor, DiscreteVisitor, DynamicBoundingVolumeTree, FrustumVisitor, TreeValue,
+    },
     prelude::*,
-    Aabb3, Frustum,
+    Aabb3, Frustum, Ray3,
 };
 use specs::{prelude::*, WorldExt};
 use std::{cell::UnsafeCell, collections::HashMap};
@@ -20,10 +22,11 @@ struct BoundingValue {
 }
 
 impl BoundingValue {
-    pub fn new(e: Entity, pos: Vec3D, dim: Vec3D) -> Self {
+    pub fn new(e: Entity, pos: Vec3D, mut dim: Vec3D) -> Self {
+        // dim.y *= -1.0;
         let pos1: (_, _, _) = pos.into();
         let pos2: (_, _, _) = (pos + dim).into();
-        let aabb = Aabb3::new(pos1.into(), pos2.into());
+        let aabb = dbg!(Aabb3::new(pos1.into(), pos2.into()));
         Self { e, aabb }
     }
 }
@@ -70,8 +73,14 @@ impl BoundingTree {
             .or_insert_with(|| mutself().inner.insert(BoundingValue::new(e, pos, dim)));
     }
 
-    pub fn within_frustrum(&self, frustrum: &Frustum<f32>) -> Vec<Entity> {
-        Vec::new()
+    pub fn test_frustrum(&self, frust: &Frustum<f32>) -> impl Iterator<Item = Entity> + '_ {
+        let mut vis = FrustumVisitor::<_, BoundingValue>::new(frust);
+        self.inner.query(&mut vis).into_iter().map(|(bv, _)| bv.e)
+    }
+
+    pub fn test_ray(&self, r: &Ray3<f32>) -> impl Iterator<Item = Entity> + '_ {
+        let mut vis = ContinuousVisitor::<_, BoundingValue>::new(r);
+        self.inner.query(&mut vis).into_iter().map(|(bv, _)| bv.e)
     }
 
     pub fn refresh(&mut self) {

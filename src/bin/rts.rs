@@ -103,6 +103,41 @@ fn main() {
 
             dispatcher.dispatch(&mut world);
             world.maintain();
+
+            continue;
+
+            let (x, y) = rl.read(|rl| (rl.get_mouse_x() as f32, rl.get_mouse_y() as f32));
+            let (swidth, sheight) =
+                rl.read(|rl| (rl.get_screen_width() as f32, rl.get_screen_height() as f32));
+
+            let (x, y) = (x / swidth, y / sheight);
+            // dbg!(
+            //     x / swidth,
+            //     y / sheight,
+            //     hacks::get_matrix_projection().inverted()
+            // );
+
+            use cgmath::{Matrix4 as CGMat4, Vector4 as CGVec4};
+            use raylib::core::math::*;
+            let proj = hacks::get_matrix_projection();
+            dbg!(proj.to_array());
+            // let xxx = proj.to_array();
+            // let proj = CGMat4::new(
+            //     xxx[0], xxx[1], xxx[2], xxx[3], xxx[4], xxx[5], xxx[6], xxx[7], xxx[8],
+            // xxx[9],     xxx[10], xxx[11], xxx[12], xxx[13], xxx[14], xxx[15],
+            // );
+
+            let mv = rl.read(|rl| rl.get_matrix_modelview());
+            dbg!(mv.to_array());
+            // let xxx = mv.to_array();
+            // let mv = CGMat4::new(
+            //     xxx[0], xxx[1], xxx[2], xxx[3], xxx[4], xxx[5], xxx[6],
+            // xxx[7], xxx[8], xxx[9],     xxx[10], xxx[11],
+            // xxx[12], xxx[13], xxx[14], xxx[15], );
+
+            // let lol = mv * proj;
+            // let pos = lol * CGVec4::new(x, y, 0.0, 1.0);
+            // dbg!(proj, mv, pos);
         }
     }
 }
@@ -140,5 +175,19 @@ mod emscripten {
         }
 
         (trampoline::<F>, closure as *mut F as EmscriptenCallbackArgs)
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+mod hacks {
+    use raylib::{core::math::Matrix, ffi::Matrix as c_matrix};
+
+    extern "C" {
+        fn GetMatrixProjection() -> c_matrix;
+    }
+
+    pub fn get_matrix_projection() -> Matrix {
+        unsafe { GetMatrixProjection().into() }
     }
 }

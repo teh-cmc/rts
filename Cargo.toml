@@ -14,7 +14,8 @@ arr_macro = "0.1"
 cgmath = "0.17"
 collision = "0.20"
 rand = "0.7"
-raylib = { git = "https://github.com/deltaphc/raylib-rs", branch = "master" }
+# raylib = { git = "https://github.com/deltaphc/raylib-rs", branch = "master" }
+raylib = { git = "https://github.com/teh-cmc/raylib-rs", branch = "cmc/raylib26" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 specs = { version = "0.16", default-features = false }

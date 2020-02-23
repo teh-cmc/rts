@@ -11,13 +11,17 @@ impl<'a> System<'a> for Renderer {
     type SystemData = (
         WriteExpect<'a, resources::Raylib>,
         ReadExpect<'a, resources::Camera>,
+        Entities<'a>,
         ReadStorage<'a, components::Pos3D>,
         ReadStorage<'a, components::Dim3D>,
         ReadStorage<'a, components::Pos2D>,
         ReadStorage<'a, components::Dim2D>,
+        ReadStorage<'a, components::Selected>,
     );
 
-    fn run(&mut self, (mut rl, cam, pos3Ds, dim3Ds, pos2Ds, dim2Ds): Self::SystemData) {
+    fn run(&mut self, sys_data: Self::SystemData) {
+        let (mut rl, cam, entities, pos3Ds, dim3Ds, pos2Ds, dim2Ds, selected) = sys_data;
+
         // TODO(cmc): safety note.
         let thread: RaylibThread = unsafe { std::mem::transmute(()) };
         let (swidth, sheight) = (rl.read(|rl| rl.get_screen_width() - 100), 40);
@@ -27,10 +31,15 @@ impl<'a> System<'a> for Renderer {
 
             {
                 let mut d2 = d.begin_mode_3D(cam.raw());
-                for (&pos, &dim) in (&pos3Ds, &dim3Ds).join() {
+                for (e, &pos, &dim) in (&entities, &pos3Ds, &dim3Ds).join() {
                     let pos: Vector3 = pos.into();
                     let dim: Vector3 = dim.into();
-                    d2.draw_cube(pos, dim.x, dim.y, dim.z, Color::RED);
+                    let col = if let Some(_) = selected.get(e) {
+                        Color::GOLD
+                    } else {
+                        Color::RED
+                    };
+                    d2.draw_cube(pos, dim.x, dim.y, dim.z, col);
                     d2.draw_cube_wires(pos, dim.x, dim.y, dim.z, Color::BLACK);
                 }
             }
