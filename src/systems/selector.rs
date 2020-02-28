@@ -27,7 +27,7 @@ impl Default for Selector {
 impl<'a> System<'a> for Selector {
     type SystemData = (
         Entities<'a>,
-        ReadExpect<'a, resources::Raylib>,
+        WriteExpect<'a, resources::Raylib>,
         ReadExpect<'a, resources::Camera>,
         ReadExpect<'a, resources::MouseState>,
         ReadExpect<'a, resources::BoundingTree>,
@@ -38,7 +38,8 @@ impl<'a> System<'a> for Selector {
     );
 
     fn run(&mut self, sys_data: Self::SystemData) {
-        let (entities, rl, cam, mouse, bt, pos3Ds, mut pos2Ds, mut dim2Ds, mut selected) = sys_data;
+        let (entities, mut rl, cam, mouse, bt, pos3Ds, mut pos2Ds, mut dim2Ds, mut selected) =
+            sys_data;
         match self.state {
             SelectorState::Idle => {
                 if mouse.is_pressed(0) {
@@ -73,98 +74,125 @@ impl<'a> System<'a> for Selector {
                 entities.delete(e).unwrap();
                 self.state = SelectorState::Idle;
 
-                use cgmath::{Point3, Vector3};
-                use collision::{Frustum, Plane, Ray3};
-                use raylib::core::math::Vector2;
+                use raylib::prelude::RaylibMode3DExt;
+                let mut proj = raylib::math::Matrix::identity();
+                let mut mv = raylib::math::Matrix::identity();
+                rl.draw(&unsafe { std::mem::transmute(()) }, |d| {
+                    let _g = d.begin_mode_3D(cam.raw());
 
-                let pos = Vector2::new(pos.x as f32, pos.y as f32);
-                dbg!(dim);
+                    proj = hacks::get_matrix_projection();
+                    mv = hacks::get_matrix_modelview();
+                });
 
-                let pos1 = Vector2::new(pos.x as f32, pos.y as f32);
-                let r1 = rl.read(|rl| rl.get_mouse_ray(pos1, cam.raw()));
-                let mut r1 = Ray3::new(
-                    (r1.position.x, r1.position.y, r1.position.z).into(),
-                    (r1.direction.x, r1.direction.y, r1.direction.z).into(),
-                );
-                let mut r1far = r1;
-                r1far.origin = r1.origin + (r1.direction.normalize() * 1000.0);
-                r1.origin = r1.origin + (r1.direction.normalize() * 0.01);
+                let mat = mv * proj;
+                let mat = mat.inverted();
 
-                let pos2 = Vector2::new(pos.x as f32 + dim.x as f32, pos.y as f32);
-                let r2 = rl.read(|rl| rl.get_mouse_ray(pos2, cam.raw()));
-                let mut r2 = Ray3::new(
-                    (r2.position.x, r2.position.y, r2.position.z).into(),
-                    (r2.direction.x, r2.direction.y, r2.direction.z).into(),
-                );
-                let mut r2far = r2;
-                r2far.origin = r2.origin + (r2.direction.normalize() * 1000.0);
-                r2.origin = r2.origin + (r2.direction.normalize() * 0.01);
+                // use cgmath::{
+                //     Matrix4 as CGMat4, Point3 as CGPnt3, Quaternion as CGQuat, SquareMatrix,
+                //     Vector3 as CGVec3, Vector4 as CGVec4,
+                // };
+                // use collision::Ray3;
+                // use raylib::core::math::Matrix as Lol;
 
-                let pos3 = Vector2::new(pos.x as f32 + dim.x as f32, pos.y as f32 + dim.y as f32);
-                let r3 = rl.read(|rl| rl.get_mouse_ray(pos3, cam.raw()));
-                let mut r3 = Ray3::new(
-                    (r3.position.x, r3.position.y, r3.position.z).into(),
-                    (r3.direction.x, r3.direction.y, r3.direction.z).into(),
-                );
-                let mut r3far = r3;
-                r3far.origin = r3.origin + (r3.direction.normalize() * 1000.0);
-                r3.origin = r3.origin + (r3.direction.normalize() * 0.01);
+                use raylib::core::math::{
+                    Matrix as CGMat4, Quaternion as CGQuat, Ray as CGRay3, Vector3 as CGVec3,
+                    Vector4 as CGVec4,
+                };
 
-                let pos4 = Vector2::new(pos.x as f32, pos.y as f32 + dim.y as f32);
-                let r4 = rl.read(|rl| rl.get_mouse_ray(pos4, cam.raw()));
-                let mut r4 = Ray3::new(
-                    (r4.position.x, r4.position.y, r4.position.z).into(),
-                    (r4.direction.x, r4.direction.y, r4.direction.z).into(),
-                );
-                let mut r4far = r4;
-                r4far.origin = r4.origin + (r4.direction.normalize() * 1000.0);
-                r4.origin = r4.origin + (r4.direction.normalize() * 0.01);
+                let (swidth, sheight) =
+                    rl.read(|rl| (rl.get_screen_width() as f32, rl.get_screen_height() as f32));
 
-                if pos1 != pos3 {
-                    dbg!(pos1, pos2, pos3, pos4);
+                const UPPER_LEFT: usize = 0;
+                const UPPER_RIGHT: usize = 1;
+                const BOTTOM_LEFT: usize = 2;
+                const BOTTOM_RIGHT: usize = 3;
+                let clicks = &[
+                    (pos.x as f32, pos.y as f32),
+                    (pos.x as f32 + dim.x as f32, pos.y as f32),
+                    (pos.x as f32 + dim.x as f32, pos.y as f32 + dim.y as f32),
+                    (pos.x as f32, pos.y as f32 + dim.y as f32),
+                ];
 
-                    let pnear = Plane::from_points(r1.origin, r2.origin, r3.origin).unwrap();
-                    let pfar = {
-                        let mut pfar = pnear;
-                        pfar.d -= 1000.0;
-                        pfar
+                let mut rays = Vec::with_capacity(4);
+                for pos in clicks {
+                    let (x, y) = ((2. * pos.0) / swidth - 1., 1. - (2. * pos.1) / sheight);
+
+                    let near = {
+                        let quat = CGQuat::new(x, y, 0., 1.);
+                        let quat = quat.transform(mat);
+                        CGVec3::new(quat.x / quat.w, quat.y / quat.w, quat.z / quat.w)
                     };
-                    // let pfar = Plane::from_points(r1far.origin, r2far.origin,
-                    // r3far.origin).unwrap();
-                    let pleft = Plane::from_points(r1.origin, r4.origin, r1far.origin).unwrap();
-                    let pright = {
-                        let mut pright = pleft;
-                        pright.d += 1000.0;
-                        pright
+                    let far = {
+                        let quat = CGQuat::new(x, y, 1., 1.);
+                        let quat = quat.transform(mat);
+                        CGVec3::new(quat.x / quat.w, quat.y / quat.w, quat.z / quat.w)
                     };
-                    // let pright = Plane::from_points(r2.origin, r3.origin, r2far.origin).unwrap();
-                    let pbottom = Plane::from_points(r3.origin, r4.origin, r3far.origin).unwrap();
-                    let ptop = {
-                        let mut ptop = pbottom;
-                        ptop.d += 1000.0;
-                        ptop
-                    };
-                    // let ptop = Plane::from_points(r1.origin, r2.origin, r1far.origin).unwrap();
 
-                    let frust = Frustum::new(pleft, pright, pbottom, ptop, pnear, pfar);
-                    dbg!(frust);
-                    dbg!(bt.test_frustrum(&frust).collect::<Vec<_>>());
+                    let xxx = far - near;
+                    // let r1 = CGRay3 {
+                    //     position: cam.raw().position,
+                    //     direction: xxx,
+                    // };
+
+                    let r1 = collision::Ray3::new(
+                        cgmath::Point3::new(near.x, near.y, near.z),
+                        cgmath::Vector3::new(xxx.x, xxx.y, xxx.z).normalize(),
+                    );
+
+                    // rays.push(r1);
+
+                    rays.push((
+                        cgmath::Point3::new(far.x, far.y, far.z),
+                        cgmath::Point3::new(near.x, near.y, near.z),
+                    ));
                 }
+
+                use collision::{Frustum, Plane};
+                dbg!(&rays);
+                let frustum = Frustum::new(
+                    /* lft */
+                    Plane::from_points(rays[0].0, rays[0].1, rays[3].0).unwrap(),
+                    /* rgt */
+                    Plane::from_points(rays[1].0, rays[1].1, rays[2].0).unwrap(),
+                    /* btm */
+                    Plane::from_points(rays[3].0, rays[3].1, rays[2].0).unwrap(),
+                    /* top */
+                    Plane::from_points(rays[0].0, rays[0].1, rays[1].0).unwrap(),
+                    /* nar */
+                    Plane::from_points(rays[0].0, rays[1].0, rays[2].0).unwrap(),
+                    /* far */
+                    Plane::from_points(rays[0].1, rays[1].1, rays[2].1).unwrap(),
+                );
 
                 selected.clear();
-                for e in dbg!(bt.test_ray(&r1).collect::<Vec<_>>()) {
+                dbg!(frustum);
+                for e in bt.test_frustum(&frustum).collect::<Vec<_>>() {
                     selected.insert(e, components::Selected).unwrap();
                 }
-                for e in dbg!(bt.test_ray(&r2).collect::<Vec<_>>()) {
-                    selected.insert(e, components::Selected).unwrap();
-                }
-                for e in dbg!(bt.test_ray(&r3).collect::<Vec<_>>()) {
-                    selected.insert(e, components::Selected).unwrap();
-                }
-                for e in dbg!(bt.test_ray(&r4).collect::<Vec<_>>()) {
-                    selected.insert(e, components::Selected).unwrap();
-                }
+                // for r in rays {
+                //     for e in bt.test_ray(&r).collect::<Vec<_>>() {
+                //         selected.insert(e, components::Selected).unwrap();
+                //     }
+                // }
             }
         }
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+mod hacks {
+    use raylib::{core::math::Matrix, ffi::Matrix as c_matrix};
+
+    extern "C" {
+        fn GetMatrixProjection() -> c_matrix;
+        fn GetMatrixModelview() -> c_matrix;
+    }
+
+    pub fn get_matrix_projection() -> Matrix {
+        unsafe { GetMatrixProjection().into() }
+    }
+    pub fn get_matrix_modelview() -> Matrix {
+        unsafe { GetMatrixModelview().into() }
     }
 }

@@ -73,7 +73,7 @@ impl BoundingTree {
             .or_insert_with(|| mutself().inner.insert(BoundingValue::new(e, pos, dim)));
     }
 
-    pub fn test_frustrum(&self, frust: &Frustum<f32>) -> impl Iterator<Item = Entity> + '_ {
+    pub fn test_frustum(&self, frust: &Frustum<f32>) -> impl Iterator<Item = Entity> + '_ {
         let mut vis = FrustumVisitor::<_, BoundingValue>::new(frust);
         self.inner.query(&mut vis).into_iter().map(|(bv, _)| bv.e)
     }

@@ -74,3 +74,17 @@ impl<'a> System<'a> for Renderer {
         });
     }
 }
+
+// -----------------------------------------------------------------------------
+
+mod hacks {
+    use raylib::{core::math::Matrix, ffi::Matrix as c_matrix};
+
+    extern "C" {
+        fn GetMatrixProjection() -> c_matrix;
+    }
+
+    pub fn get_matrix_projection() -> Matrix {
+        unsafe { GetMatrixProjection().into() }
+    }
+}

@@ -60,7 +60,7 @@ fn main() {
 
         resources::Camera::new(inner)
     };
-    world.insert(cam);
+    world.insert(cam.clone());
 
     use components::Vec3D;
     for x in -10..=10 {
@@ -75,6 +75,27 @@ fn main() {
                 .build();
         }
     }
+
+    // rl.write(|rl| {
+    //     let mut proj = hacks::get_matrix_projection();
+    //     proj.m0 = 0.974279;
+    //     proj.m1 = 0.000000;
+    //     proj.m2 = 0.000000;
+    //     proj.m3 = 0.000000;
+    //     proj.m4 = 0.000000;
+    //     proj.m5 = 1.732051;
+    //     proj.m6 = 0.000000;
+    //     proj.m7 = 0.000000;
+    //     proj.m8 = 0.000000;
+    //     proj.m9 = 0.000000;
+    //     proj.m10 = -1.000020;
+    //     proj.m11 = -1.000000;
+    //     proj.m12 = 0.000000;
+    //     proj.m13 = 0.000000;
+    //     proj.m14 = -0.020000;
+    //     proj.m15 = 0.000000;
+    //     rl.set_matrix_projection(&unsafe { std::mem::transmute(()) }, proj);
+    // });
 
     #[cfg(target_os = "emscripten")]
     unsafe {
@@ -109,35 +130,27 @@ fn main() {
             let (x, y) = rl.read(|rl| (rl.get_mouse_x() as f32, rl.get_mouse_y() as f32));
             let (swidth, sheight) =
                 rl.read(|rl| (rl.get_screen_width() as f32, rl.get_screen_height() as f32));
-
             let (x, y) = (x / swidth, y / sheight);
-            // dbg!(
-            //     x / swidth,
-            //     y / sheight,
-            //     hacks::get_matrix_projection().inverted()
-            // );
 
             use cgmath::{Matrix4 as CGMat4, Vector4 as CGVec4};
             use raylib::core::math::*;
             let proj = hacks::get_matrix_projection();
-            dbg!(proj.to_array());
-            // let xxx = proj.to_array();
-            // let proj = CGMat4::new(
-            //     xxx[0], xxx[1], xxx[2], xxx[3], xxx[4], xxx[5], xxx[6], xxx[7], xxx[8],
-            // xxx[9],     xxx[10], xxx[11], xxx[12], xxx[13], xxx[14], xxx[15],
-            // );
+            let modelview = rl.read(|rl| rl.get_matrix_modelview());
+            let mat = (proj * modelview).inverted();
+            dbg!(mat);
+            let v = Vector4::new(x, y, 1.0, 1.0);
 
-            let mv = rl.read(|rl| rl.get_matrix_modelview());
-            dbg!(mv.to_array());
-            // let xxx = mv.to_array();
-            // let mv = CGMat4::new(
-            //     xxx[0], xxx[1], xxx[2], xxx[3], xxx[4], xxx[5], xxx[6],
-            // xxx[7], xxx[8], xxx[9],     xxx[10], xxx[11],
-            // xxx[12], xxx[13], xxx[14], xxx[15], );
+            let xxx = mat.to_array();
+            let mat = CGMat4::new(
+                xxx[0], xxx[1], xxx[2], xxx[3], xxx[4], xxx[5], xxx[6], xxx[7], xxx[8], xxx[9],
+                xxx[10], xxx[11], xxx[12], xxx[13], xxx[14], xxx[15],
+            );
 
-            // let lol = mv * proj;
-            // let pos = lol * CGVec4::new(x, y, 0.0, 1.0);
-            // dbg!(proj, mv, pos);
+            let v = CGVec4::new(v.x, v.y, v.z, v.w);
+            let v = mat * v;
+            let v = v / v.w;
+
+            dbg!(v);
         }
     }
 }
@@ -185,9 +198,13 @@ mod hacks {
 
     extern "C" {
         fn GetMatrixProjection() -> c_matrix;
+        fn GetMatrixModelview() -> c_matrix;
     }
 
     pub fn get_matrix_projection() -> Matrix {
         unsafe { GetMatrixProjection().into() }
+    }
+    pub fn get_matrix_modelview() -> Matrix {
+        unsafe { GetMatrixModelview().into() }
     }
 }
