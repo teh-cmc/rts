@@ -91,8 +91,8 @@ impl<'a> System<'a> for Selector {
                 entities.delete(e).unwrap();
                 self.state = SelectorState::Idle;
 
-                let mat = *m_view.0 * *m_proj.0;
-                let mat = mat.invert().unwrap();
+                let mat = dbg!(*m_view.0) * dbg!(*m_proj.0);
+                let mat = dbg!(mat.invert().unwrap());
                 let (swidth, sheight) =
                     rl.read(|rl| (rl.get_screen_width() as f32, rl.get_screen_height() as f32));
 
@@ -108,7 +108,7 @@ impl<'a> System<'a> for Selector {
 
                     let near: Point3 = {
                         let pos: Vec4 = (x, y, 0., 1.).into();
-                        let pos = dbg!(mat) * dbg!(*pos);
+                        let pos = mat * *pos;
                         (pos.x / pos.w, pos.y / pos.w, pos.z / pos.w).into()
                     };
                     let far: Point3 = {
