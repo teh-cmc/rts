@@ -74,7 +74,7 @@ impl<'a> System<'a> for Selector {
                 entities.delete(e).unwrap();
                 self.state = SelectorState::Idle;
 
-                use raylib::prelude::RaylibMode3DExt;
+                use raylib::prelude::{RaylibDraw3D, RaylibMode3DExt};
                 let mut proj = raylib::math::Matrix::identity();
                 let mut mv = raylib::math::Matrix::identity();
                 rl.draw(&unsafe { std::mem::transmute(()) }, |d| {
@@ -112,6 +112,7 @@ impl<'a> System<'a> for Selector {
                     (pos.x as f32 + dim.x as f32, pos.y as f32 + dim.y as f32),
                     (pos.x as f32, pos.y as f32 + dim.y as f32),
                 ];
+                dbg!(&clicks);
 
                 let mut rays = Vec::with_capacity(4);
                 for pos in clicks {
@@ -128,22 +129,16 @@ impl<'a> System<'a> for Selector {
                         CGVec3::new(quat.x / quat.w, quat.y / quat.w, quat.z / quat.w)
                     };
 
-                    let xxx = far - near;
                     // let r1 = CGRay3 {
                     //     position: cam.raw().position,
                     //     direction: xxx,
                     // };
 
-                    let r1 = collision::Ray3::new(
-                        cgmath::Point3::new(near.x, near.y, near.z),
-                        cgmath::Vector3::new(xxx.x, xxx.y, xxx.z).normalize(),
-                    );
-
                     // rays.push(r1);
 
                     rays.push((
-                        cgmath::Point3::new(far.x, far.y, far.z),
                         cgmath::Point3::new(near.x, near.y, near.z),
+                        cgmath::Point3::new(far.x, far.y, far.z),
                     ));
                 }
 
@@ -169,11 +164,19 @@ impl<'a> System<'a> for Selector {
                 for e in bt.test_frustum(&frustum).collect::<Vec<_>>() {
                     selected.insert(e, components::Selected).unwrap();
                 }
-                // for r in rays {
-                //     for e in bt.test_ray(&r).collect::<Vec<_>>() {
-                //         selected.insert(e, components::Selected).unwrap();
-                //     }
-                // }
+
+                let rays = rays.into_iter().map(|(near, far)| {
+                    let xxx = far - near;
+                    collision::Ray3::new(
+                        cgmath::Point3::new(near.x, near.y, near.z),
+                        cgmath::Vector3::new(xxx.x, xxx.y, xxx.z).normalize(),
+                    )
+                });
+                for r in rays {
+                    for e in bt.test_ray(&r).collect::<Vec<_>>() {
+                        selected.insert(e, components::Selected).unwrap();
+                    }
+                }
             }
         }
     }
