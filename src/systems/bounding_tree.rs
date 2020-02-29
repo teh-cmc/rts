@@ -1,5 +1,4 @@
-use crate::{components, resources};
-
+use crate::{components::prelude::*, resources::prelude::*};
 use specs::prelude::*;
 
 // -----------------------------------------------------------------------------
@@ -10,16 +9,22 @@ pub struct BoundingTree;
 impl<'a> System<'a> for BoundingTree {
     type SystemData = (
         Entities<'a>,
-        WriteExpect<'a, resources::BoundingTree>,
-        ReadStorage<'a, components::Pos3D>,
-        ReadStorage<'a, components::Dim3D>,
-        WriteStorage<'a, components::Pos3DInvalidated>,
+        WriteExpect<'a, ResrcBoundingTree>,
+        ReadStorage<'a, CompPos3D>,
+        ReadStorage<'a, CompMesh>,
+        WriteStorage<'a, CompPos3DInvalidated>,
     );
 
-    fn run(&mut self, (entities, mut bt, pos3Ds, dim3Ds, mut moved): Self::SystemData) {
-        for (e, pos, dim, _) in (&entities, &pos3Ds, &dim3Ds, &moved).join() {
-            eprintln!("{:?} invalidated", e);
-            bt.update_entity(e, pos.0, dim.0);
+    fn run(&mut self, (entities, mut bt, pos3Ds, meshes, mut moved): Self::SystemData) {
+        for (e, pos, mesh, _) in (&entities, &pos3Ds, &meshes, &moved).join() {
+            match mesh {
+                CompMesh::Rect { .. } => {}
+                CompMesh::Line { .. } => {}
+                CompMesh::Cube { dimensions } => {
+                    eprintln!("{:?} invalidated", e);
+                    bt.update_entity(e, pos.0, *dimensions);
+                }
+            }
         }
         bt.refresh();
 

@@ -1,7 +1,7 @@
 #![feature(bindings_after_at, type_name_of_val)]
 
 use raylib::prelude::*;
-use rts::{components, resources, systems};
+use rts::{components::prelude::*, maths::prelude::*, resources::prelude::*, systems::prelude::*};
 use specs::{prelude::*, WorldExt};
 
 // -----------------------------------------------------------------------------
@@ -9,7 +9,7 @@ use specs::{prelude::*, WorldExt};
 fn main() {
     const WINDOW_WIDTH: i32 = 1280;
     const WINDOW_HEIGHT: i32 = 720;
-    let (rl, _) = raylib::init()
+    let (rl, rl_thread) = raylib::init()
         .size(WINDOW_WIDTH, WINDOW_HEIGHT)
         .title("RTS")
         .build();
@@ -18,15 +18,15 @@ fn main() {
     let mut dispatcher = {
         // TODO(cmc): macro this?
         use std::any::type_name_of_val as sys_id;
-        let mouse = systems::Mouse::default();
+        let mouse = SysMouse::default();
         let mouse_id = sys_id(&mouse);
-        let cam = systems::Camera::default();
+        let cam = SysCamera::default();
         let cam_id = sys_id(&cam);
-        let selector = systems::Selector::default();
+        let selector = SysSelector::default();
         let selector_id = sys_id(&selector);
-        let bounding_tree = systems::BoundingTree::default();
+        let bounding_tree = SysBoundingTree::default();
         let bounding_tree_id = sys_id(&bounding_tree);
-        let renderer = systems::Renderer::default();
+        let renderer = SysRenderer::new(rl_thread);
 
         DispatcherBuilder::new()
             .with(mouse, mouse_id, &[])
@@ -38,12 +38,12 @@ fn main() {
     };
     dispatcher.setup(&mut world);
 
-    let mut rl = resources::Raylib::new(rl);
+    let mut rl = ResrcRaylib::new(rl);
     world.insert(rl.clone());
 
-    world.insert(resources::DeltaTime(0.0));
-    world.insert(resources::MouseState::default());
-    world.insert(resources::BoundingTree::new());
+    world.insert(ResrcDeltaTime(0.0));
+    world.insert(ResrcMouseState::default());
+    world.insert(ResrcBoundingTree::new());
 
     let cam = {
         let inner = Camera3D::perspective(
@@ -58,55 +58,37 @@ fn main() {
             rl.hide_cursor();
         });
 
-        resources::Camera::new(inner)
+        ResrcCamera::new(inner)
     };
-    world.insert(cam.clone());
+    world.insert(cam);
+    world.insert(ResrcModelView::default());
+    world.insert(ResrcProjection::default());
 
-    use components::Vec3D;
     for x in -10..=10 {
         for z in -10..=10 {
-            let pos: Vec3D = (x as f32 * 4.0, 0.0, z as f32 * 4.0).into();
-            let dim: Vec3D = (2.0, 2.0, 2.0).into();
+            let cube = CompMesh::Cube {
+                dimensions: (2., 2., 2.).into(),
+            };
             world
                 .create_entity()
-                .with(components::Pos3D(pos))
-                .with(components::Dim3D(dim))
-                .with(components::Pos3DInvalidated)
+                .with(CompPos3D((x as f32 * 4.0, 0.0, z as f32 * 4.0).into()))
+                .with(cube)
+                .with(CompPos3DInvalidated)
+                .with(CompColor(Color::RED))
                 .build();
         }
     }
 
-    // rl.write(|rl| {
-    //     let mut proj = hacks::get_matrix_projection();
-    //     proj.m0 = 0.974279;
-    //     proj.m1 = 0.000000;
-    //     proj.m2 = 0.000000;
-    //     proj.m3 = 0.000000;
-    //     proj.m4 = 0.000000;
-    //     proj.m5 = 1.732051;
-    //     proj.m6 = 0.000000;
-    //     proj.m7 = 0.000000;
-    //     proj.m8 = 0.000000;
-    //     proj.m9 = 0.000000;
-    //     proj.m10 = -1.000020;
-    //     proj.m11 = -1.000000;
-    //     proj.m12 = 0.000000;
-    //     proj.m13 = 0.000000;
-    //     proj.m14 = -0.020000;
-    //     proj.m15 = 0.000000;
-    //     rl.set_matrix_projection(&unsafe { std::mem::transmute(()) }, proj);
-    // });
-
     #[cfg(target_os = "emscripten")]
     unsafe {
         // TODO(cmc): Not sure why but hours of debugging have shown that I need
-        // to yield back one time to the browser event-loop before gettings the
+        // to yield back one time to the browser event-loop before getting the
         // real stuff going...
         emscripten::emscripten_sleep(1);
 
         let mut main_loop = move || {
             let delta = rl.read(|rl| rl.get_frame_time() * 50.0);
-            world.write_resource::<resources::DeltaTime>().0 = delta;
+            world.write_resource::<ResrcDeltaTime>().0 = delta;
 
             dispatcher.dispatch(&mut world);
             world.maintain();
@@ -120,37 +102,10 @@ fn main() {
         rl.write(|rl| rl.set_target_fps(120));
         while !rl.read(|rl| rl.window_should_close()) {
             let delta = rl.read(|rl| rl.get_frame_time() * 50.0);
-            world.write_resource::<resources::DeltaTime>().0 = delta;
+            world.write_resource::<ResrcDeltaTime>().0 = delta;
 
             dispatcher.dispatch(&mut world);
             world.maintain();
-
-            continue;
-
-            let (x, y) = rl.read(|rl| (rl.get_mouse_x() as f32, rl.get_mouse_y() as f32));
-            let (swidth, sheight) =
-                rl.read(|rl| (rl.get_screen_width() as f32, rl.get_screen_height() as f32));
-            let (x, y) = (x / swidth, y / sheight);
-
-            use cgmath::{Matrix4 as CGMat4, Vector4 as CGVec4};
-            use raylib::core::math::*;
-            let proj = hacks::get_matrix_projection();
-            let modelview = rl.read(|rl| rl.get_matrix_modelview());
-            let mat = (proj * modelview).inverted();
-            dbg!(mat);
-            let v = Vector4::new(x, y, 1.0, 1.0);
-
-            let xxx = mat.to_array();
-            let mat = CGMat4::new(
-                xxx[0], xxx[1], xxx[2], xxx[3], xxx[4], xxx[5], xxx[6], xxx[7], xxx[8], xxx[9],
-                xxx[10], xxx[11], xxx[12], xxx[13], xxx[14], xxx[15],
-            );
-
-            let v = CGVec4::new(v.x, v.y, v.z, v.w);
-            let v = mat * v;
-            let v = v / v.w;
-
-            dbg!(v);
         }
     }
 }
@@ -188,23 +143,5 @@ mod emscripten {
         }
 
         (trampoline::<F>, closure as *mut F as EmscriptenCallbackArgs)
-    }
-}
-
-// -----------------------------------------------------------------------------
-
-mod hacks {
-    use raylib::{core::math::Matrix, ffi::Matrix as c_matrix};
-
-    extern "C" {
-        fn GetMatrixProjection() -> c_matrix;
-        fn GetMatrixModelview() -> c_matrix;
-    }
-
-    pub fn get_matrix_projection() -> Matrix {
-        unsafe { GetMatrixProjection().into() }
-    }
-    pub fn get_matrix_modelview() -> Matrix {
-        unsafe { GetMatrixModelview().into() }
     }
 }

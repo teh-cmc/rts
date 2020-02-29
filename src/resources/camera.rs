@@ -1,7 +1,4 @@
-use crate::{
-    components,
-    resources::{DeltaTime, Raylib},
-};
+use crate::{components::prelude::*, maths::prelude::*, resources::prelude::*};
 use raylib::prelude::*;
 use specs::{prelude::*, WorldExt};
 
@@ -11,6 +8,7 @@ use specs::{prelude::*, WorldExt};
 pub struct Camera {
     inner: Camera3D,
 
+    pos: Vec3,
     x_rad: f32,
     y_rad: f32,
     radius: f32,
@@ -22,6 +20,7 @@ impl Camera {
 
     pub fn new(inner: Camera3D) -> Self {
         Self {
+            pos: inner.position.to_array().into(),
             inner,
             x_rad: Self::PI * 0.25,
             y_rad: -Self::PI * 0.25,
@@ -33,25 +32,9 @@ impl Camera {
         self.inner
     }
 
-    pub fn set_pos(&mut self, rl: &Raylib, pos: components::Pos3D) -> components::Pos3D {
-        let pos_old = components::Vec3D::from((
-            self.inner.position.x,
-            self.inner.position.y,
-            self.inner.position.z,
-        ))
-        .into();
-        self.inner.position = pos.into();
-        self.inner.target = Vector3::new(
-            self.inner.position.x + self.radius * self.x_rad.sin() * self.y_rad.cos(),
-            self.inner.position.y + self.radius * self.y_rad.sin(),
-            self.inner.position.z + self.radius * self.x_rad.cos() * self.y_rad.cos(),
-        );
-        pos_old
-    }
-
-    // https://gamedev.stackexchange.com/a/159314
     // TODO(cmc): should be bitsets obviously
-    pub fn update(&mut self, rl: &Raylib, delta: &DeltaTime) {
+    // https://gamedev.stackexchange.com/a/159314
+    pub fn update(&mut self, rl: &ResrcRaylib, delta: &ResrcDeltaTime) {
         // TODO(cmc): kbd state
         let ((l, u, r, d), zoom) = rl.read(|rl| {
             let dir = (
@@ -66,30 +49,32 @@ impl Camera {
         });
 
         if l {
-            self.inner.position.x += delta.0 * self.x_rad.cos();
-            self.inner.position.z -= delta.0 * self.x_rad.sin();
+            self.pos.x += delta.0 * self.x_rad.cos();
+            self.pos.z -= delta.0 * self.x_rad.sin();
         }
         if r {
-            self.inner.position.x -= delta.0 * self.x_rad.cos();
-            self.inner.position.z += delta.0 * self.x_rad.sin();
+            self.pos.x -= delta.0 * self.x_rad.cos();
+            self.pos.z += delta.0 * self.x_rad.sin();
         }
         if u {
-            self.inner.position.x += delta.0 * self.x_rad.sin();
-            self.inner.position.z += delta.0 * self.x_rad.cos();
+            self.pos.x += delta.0 * self.x_rad.sin();
+            self.pos.z += delta.0 * self.x_rad.cos();
         }
         if d {
-            self.inner.position.x -= delta.0 * self.x_rad.sin();
-            self.inner.position.z -= delta.0 * self.x_rad.cos();
+            self.pos.x -= delta.0 * self.x_rad.sin();
+            self.pos.z -= delta.0 * self.x_rad.cos();
         }
 
         self.y_rad += zoom as f32 * delta.0 * 10. * Self::PI / 180.0;
         self.y_rad = self.y_rad.max(-Self::PI / 3.0).min(-Self::PI * 0.15);
-        self.inner.position.y = Self::Y * 2. * self.y_rad.abs();
+        self.pos.y = Self::Y * 2. * self.y_rad.abs();
 
-        self.inner.target = Vector3::new(
-            self.inner.position.x + self.radius * self.x_rad.sin() * self.y_rad.cos(),
-            self.inner.position.y + self.radius * self.y_rad.sin(),
-            self.inner.position.z + self.radius * self.x_rad.cos() * self.y_rad.cos(),
-        );
+        self.inner.position = (self.pos.x, self.pos.y, self.pos.z).into();
+        self.inner.target = (
+            self.pos.x + self.radius * self.x_rad.sin() * self.y_rad.cos(),
+            self.pos.y + self.radius * self.y_rad.sin(),
+            self.pos.z + self.radius * self.x_rad.cos() * self.y_rad.cos(),
+        )
+            .into();
     }
 }

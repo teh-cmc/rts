@@ -1,5 +1,4 @@
-use crate::resources;
-
+use crate::resources::prelude::*;
 use specs::prelude::*;
 
 // -----------------------------------------------------------------------------
@@ -9,8 +8,8 @@ pub struct Mouse;
 
 impl<'a> System<'a> for Mouse {
     type SystemData = (
-        ReadExpect<'a, resources::Raylib>,
-        WriteExpect<'a, resources::MouseState>,
+        ReadExpect<'a, ResrcRaylib>,
+        WriteExpect<'a, ResrcMouseState>,
     );
 
     fn run(&mut self, (rl, mut mouse): Self::SystemData) {

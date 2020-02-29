@@ -4,8 +4,10 @@ mod inputs;
 mod renderer;
 mod selector;
 
-pub use bounding_tree::BoundingTree;
-pub use camera::Camera;
-pub use inputs::Mouse;
-pub use renderer::Renderer;
-pub use selector::Selector;
+pub mod prelude {
+    pub use super::{
+        bounding_tree::BoundingTree as SysBoundingTree, camera::Camera as SysCamera,
+        inputs::Mouse as SysMouse, renderer::Renderer as SysRenderer,
+        selector::Selector as SysSelector,
+    };
+}

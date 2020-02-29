@@ -1,5 +1,4 @@
-use crate::resources;
-
+use crate::resources::prelude::*;
 use specs::prelude::*;
 
 // -----------------------------------------------------------------------------
@@ -9,9 +8,9 @@ pub struct Camera;
 
 impl<'a> System<'a> for Camera {
     type SystemData = (
-        ReadExpect<'a, resources::Raylib>,
-        ReadExpect<'a, resources::DeltaTime>,
-        WriteExpect<'a, resources::Camera>,
+        ReadExpect<'a, ResrcRaylib>,
+        ReadExpect<'a, ResrcDeltaTime>,
+        WriteExpect<'a, ResrcCamera>,
     );
 
     fn run(&mut self, (rl, delta, mut cam): Self::SystemData) {
