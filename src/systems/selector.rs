@@ -92,7 +92,7 @@ impl<'a> System<'a> for Selector {
                 self.state = SelectorState::Idle;
 
                 let mat = dbg!(*m_view.0) * dbg!(*m_proj.0);
-                let mat = dbg!(mat.invert().unwrap());
+                let mat = dbg!(dbg!(mat).invert().unwrap());
                 let (swidth, sheight) =
                     rl.read(|rl| (rl.get_screen_width() as f32, rl.get_screen_height() as f32));
 
