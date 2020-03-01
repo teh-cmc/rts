@@ -9,6 +9,7 @@ default = []
 parallel = ["specs/parallel"]
 
 [dependencies]
+anyhow = "1.0"
 arr_macro = "0.1"
 cgmath = "0.17"
 collision = "0.20"

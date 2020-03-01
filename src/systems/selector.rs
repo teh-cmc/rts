@@ -1,4 +1,5 @@
 use crate::{components::prelude::*, maths::prelude::*, resources::prelude::*};
+use anyhow::{anyhow, Error as AnyError, Result as AnyResult};
 use raylib::color::Color;
 use specs::prelude::*;
 
@@ -159,20 +160,33 @@ impl<'a> System<'a> for Selector {
                         .build();
                 }
 
-                let frustum = Frustum::new(
-                    /* lft */
-                    Plane::from_points(*planes[0].0, *planes[0].1, *planes[0].2).unwrap(),
-                    /* rgt */
-                    Plane::from_points(*planes[1].0, *planes[1].1, *planes[1].2).unwrap(),
-                    /* btm */
-                    Plane::from_points(*planes[2].0, *planes[2].1, *planes[2].2).unwrap(),
-                    /* top */
-                    Plane::from_points(*planes[3].0, *planes[3].1, *planes[3].2).unwrap(),
-                    /* nar */
-                    Plane::from_points(*planes[4].0, *planes[4].1, *planes[4].2).unwrap(),
-                    /* far */
-                    Plane::from_points(*planes[5].0, *planes[5].1, *planes[5].2).unwrap(),
-                );
+                let frustum = (|| {
+                    macro_rules! plane {
+                        ($p1:expr, $p2:expr, $p3:expr) => {
+                            Plane::from_points($p1, $p2, $p3).ok_or(anyhow!("illegal plane"))
+                        };
+                    }
+                    let f = Frustum::new(
+                        /* lft */
+                        plane!(*planes[0].0, *planes[0].1, *planes[0].2)?,
+                        /* rgt */
+                        plane!(*planes[1].0, *planes[1].1, *planes[1].2)?,
+                        /* btm */
+                        plane!(*planes[2].0, *planes[2].1, *planes[2].2)?,
+                        /* top */
+                        plane!(*planes[3].0, *planes[3].1, *planes[3].2)?,
+                        /* nar */
+                        plane!(*planes[4].0, *planes[4].1, *planes[4].2)?,
+                        /* far */
+                        plane!(*planes[5].0, *planes[5].1, *planes[5].2)?,
+                    );
+                    Ok::<_, AnyError>(f)
+                })();
+
+                if frustum.is_err() {
+                    return;
+                }
+                let frustum = frustum.unwrap();
 
                 // selected.clear();
                 dbg!(frustum);
