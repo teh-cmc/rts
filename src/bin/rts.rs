@@ -9,12 +9,13 @@ use specs::{prelude::*, WorldExt};
 fn main() {
     const WINDOW_WIDTH: i32 = 1280;
     const WINDOW_HEIGHT: i32 = 720;
-    let (rl, rl_thread) = raylib::init()
+    let (mut rl, rl_thread) = raylib::init()
         .size(WINDOW_WIDTH, WINDOW_HEIGHT)
         .title("RTS")
         .build();
 
     let mut world = World::new();
+
     let mut dispatcher = {
         // TODO(cmc): macro this?
         use std::any::type_name_of_val as sys_id;
@@ -26,7 +27,7 @@ fn main() {
         let selector_id = sys_id(&selector);
         let bounding_tree = SysBoundingTree::default();
         let bounding_tree_id = sys_id(&bounding_tree);
-        let renderer = SysRenderer::new(rl_thread);
+        let renderer = SysRenderer::new(rl_thread.clone());
 
         DispatcherBuilder::new()
             .with(mouse, mouse_id, &[])
@@ -38,12 +39,32 @@ fn main() {
     };
     dispatcher.setup(&mut world);
 
-    let mut rl = ResrcRaylib::new(rl);
-    world.insert(rl.clone());
-
     world.insert(ResrcDeltaTime(0.0));
     world.insert(ResrcMouseState::default());
     world.insert(ResrcBoundingTree::new());
+    world.insert(ResrcModelView::default());
+    world.insert(ResrcProjection::default());
+
+    let meshes = ResrcMeshStore::new(&rl_thread);
+    for x in -10..=10 {
+        for z in -10..=10 {
+            let cube = meshes.instantiate_model(&mut rl, &rl_thread, ResrcMeshStore::CUBE);
+            let cube = CompModel3D(cube);
+            let transform = CGMat4::from_translation((x as f32 * 4.0, 0.0, z as f32 * 4.0).into());
+            let transform = transform * CGMat4::from_scale(2.);
+            world
+                .create_entity()
+                .with(CompTransform3D(transform.into()))
+                .with(cube)
+                .with(CompInvalidated)
+                .with(CompColor(Color::RED))
+                .build();
+        }
+    }
+    world.insert(meshes);
+
+    let mut rl = ResrcRaylib::new(rl);
+    world.insert(rl.clone());
 
     let cam = {
         let inner = Camera3D::perspective(
@@ -61,23 +82,6 @@ fn main() {
         ResrcCamera::new(inner)
     };
     world.insert(cam);
-    world.insert(ResrcModelView::default());
-    world.insert(ResrcProjection::default());
-
-    for x in -10..=10 {
-        for z in -10..=10 {
-            let cube = CompMesh::Cube {
-                dimensions: (2., 2., 2.).into(),
-            };
-            world
-                .create_entity()
-                .with(CompPos3D((x as f32 * 4.0, 0.0, z as f32 * 4.0).into()))
-                .with(cube)
-                .with(CompPos3DInvalidated)
-                .with(CompColor(Color::RED))
-                .build();
-        }
-    }
 
     #[cfg(target_os = "emscripten")]
     unsafe {

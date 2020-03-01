@@ -8,3 +8,4 @@ perf.*
 .gdb*
 cargo-cache/
 cargo-target/
+vgcore.*

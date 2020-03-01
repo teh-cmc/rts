@@ -1,31 +1,21 @@
-use crate::maths::{Point3, Vec2, Vec2i, Vec3};
+use crate::{
+    maths::{Mat4, Point3, Vec2, Vec2i, Vec3},
+    resources::prelude::Model,
+};
 use specs::{prelude::*, storage::HashMapStorage, Component};
 
 pub mod prelude {
     pub use super::{
-        Color as CompColor, Mesh as CompMesh, Pos2D as CompPos2D,
-        Pos2DInvalidated as CompPos2DInvalidated, Pos3D as CompPos3D,
-        Pos3DInvalidated as CompPos3DInvalidated, Selected as CompSelected,
+        Color as CompColor, DirectShape as CompDirectShape, Invalidated as CompInvalidated,
+        Model3D as CompModel3D, Selected as CompSelected, Transform3D as CompTransform3D,
     };
 }
 
 // -----------------------------------------------------------------------------
 
-#[derive(Clone, Copy, Debug, Component)]
-#[storage(HashMapStorage)]
-pub struct Pos2D(pub Vec2i);
-
 #[derive(Clone, Copy, Debug, Default, Component)]
 #[storage(NullStorage)]
-pub struct Pos2DInvalidated;
-
-#[derive(Clone, Copy, Debug, Component)]
-#[storage(VecStorage)]
-pub struct Pos3D(pub Vec3);
-
-#[derive(Clone, Copy, Debug, Default, Component)]
-#[storage(NullStorage)]
-pub struct Pos3DInvalidated;
+pub struct Invalidated;
 
 #[derive(Clone, Copy, Debug, Default, Component)]
 #[storage(NullStorage)]
@@ -35,12 +25,17 @@ pub struct Selected;
 #[storage(VecStorage)]
 pub struct Color(pub raylib::color::Color);
 
-// -----------------------------------------------------------------------------
+#[derive(Clone, Debug, Component)]
+#[storage(HashMapStorage)]
+pub enum DirectShape {
+    Rect { pos: Vec2i, dimensions: Vec2i },
+    WireFrame { vertices: Vec<Point3> },
+}
+
+#[derive(Debug, Component)]
+#[storage(VecStorage)]
+pub struct Model3D(pub Model);
 
 #[derive(Clone, Copy, Debug, Component)]
 #[storage(VecStorage)]
-pub enum Mesh {
-    Rect { dimensions: Vec2i },
-    Cube { dimensions: Vec3 },
-    Line { a: Point3, b: Point3 },
-}
+pub struct Transform3D(pub Mat4);

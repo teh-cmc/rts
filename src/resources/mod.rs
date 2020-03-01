@@ -1,12 +1,16 @@
 mod bounding_tree;
 mod camera;
+mod models;
 mod mouse;
 mod raylib;
 
 pub mod prelude {
     pub use super::{
-        bounding_tree::BoundingTree as ResrcBoundingTree, camera::Camera as ResrcCamera,
-        mouse::MouseState as ResrcMouseState, raylib::Raylib as ResrcRaylib,
+        bounding_tree::BoundingTree as ResrcBoundingTree,
+        camera::Camera as ResrcCamera,
+        models::{MeshID, MeshStore as ResrcMeshStore, Model},
+        mouse::MouseState as ResrcMouseState,
+        raylib::Raylib as ResrcRaylib,
         DeltaTime as ResrcDeltaTime, ModelView as ResrcModelView, Projection as ResrcProjection,
     };
 }

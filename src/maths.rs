@@ -18,6 +18,10 @@ use std::ops::{Deref, DerefMut};
 pub use cgmath::prelude::*;
 pub mod prelude {
     pub use super::*;
+    pub use cgmath::{
+        Matrix4 as CGMat4, Point3 as CGPoint3, Quaternion as CGQuat, Vector2 as CGVec2,
+        Vector3 as CGVec3, Vector4 as CGVec4,
+    };
 }
 
 // TODO(cmc): macros everywhere.
@@ -97,6 +101,23 @@ where
 
 /* Feed directly to Raylib C */
 
+impl Into<RMat4> for Mat4 {
+    #[rustfmt::skip]
+    fn into(self) -> RMat4 {
+        let c0 = self.0.x;
+        let c1 = self.0.y;
+        let c2 = self.0.z;
+        let c3 = self.0.w;
+        RMat4 {
+            m0:  c0[0], m1:  c0[1], m2:  c0[2], m3: c0[3],
+            m4:  c1[0], m5:  c1[1], m6:  c1[2], m7: c1[3],
+            m8:  c2[0], m9:  c2[1], m10: c2[2], m11: c2[3],
+            m12: c3[0], m13: c3[1], m14: c3[2], m15: c3[3],
+        }
+    }
+}
+
+// TODO(cmc): remove dupes
 impl Into<RawMat4> for Mat4 {
     #[rustfmt::skip]
     fn into(self) -> RawMat4 {
@@ -105,10 +126,10 @@ impl Into<RawMat4> for Mat4 {
         let c2 = self.0.z;
         let c3 = self.0.w;
         RawMat4 {
-            m0:  c0[0],  m1:  c0[1],  m2:  c0[2],   m3: c0[3],
-            m4:  c1[4],  m5:  c1[5],  m6:  c1[6],   m7: c1[7],
-            m8:  c2[8],  m9:  c2[9],  m10: c2[10], m11: c2[11],
-            m12: c3[12], m13: c3[13], m14: c3[14], m15: c3[15],
+            m0:  c0[0], m1:  c0[1], m2:  c0[2], m3: c0[3],
+            m4:  c1[0], m5:  c1[1], m6:  c1[2], m7: c1[3],
+            m8:  c2[0], m9:  c2[1], m10: c2[2], m11: c2[3],
+            m12: c3[0], m13: c3[1], m14: c3[2], m15: c3[3],
         }
     }
 }

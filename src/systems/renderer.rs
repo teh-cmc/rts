@@ -21,9 +21,9 @@ impl<'a> System<'a> for Renderer {
         WriteExpect<'a, ResrcProjection>,
         ReadExpect<'a, ResrcCamera>,
         Entities<'a>,
-        ReadStorage<'a, CompMesh>,
-        ReadStorage<'a, CompPos3D>,
-        ReadStorage<'a, CompPos2D>,
+        ReadStorage<'a, CompDirectShape>,
+        WriteStorage<'a, CompModel3D>,
+        ReadStorage<'a, CompTransform3D>,
         ReadStorage<'a, CompSelected>,
         ReadStorage<'a, CompColor>,
     );
@@ -35,9 +35,9 @@ impl<'a> System<'a> for Renderer {
             mut m_proj,
             cam,
             entities,
-            meshes,
-            pos3Ds,
-            pos2Ds,
+            shapes,
+            mut models,
+            transforms,
             selected,
             colors,
         ) = sys_data;
@@ -57,8 +57,12 @@ impl<'a> System<'a> for Renderer {
                 *m_view.0 = *hacks::get_matrix_modelview();
                 *m_proj.0 = *hacks::get_matrix_projection();
 
-                for (e, mesh, &CompPos3D(pos), &CompColor(color)) in
-                    (&entities, &meshes, &pos3Ds, &colors).join()
+                for (
+                    e,
+                    &mut CompModel3D(ref mut model),
+                    &CompTransform3D(transform),
+                    &CompColor(color),
+                ) in (&entities, &mut models, &transforms, &colors).join()
                 {
                     // TODO(cmc): something smarter
                     let color = if let Some(_) = selected.get(e) {
@@ -67,38 +71,33 @@ impl<'a> System<'a> for Renderer {
                         color
                     };
 
-                    match mesh {
-                        CompMesh::Rect { .. } => {}
-                        &CompMesh::Cube { dimensions } => {
-                            let dim = dimensions;
+                    // TODO(cmc): needs interior mutability... or a transform
+                    // dedicated system?
+                    model.set_transform(&transform.into());
+                    d2.draw_model(model, Vector3::new(0., 0., 0.), 1., color);
+                    d2.draw_model_wires(model, Vector3::new(0., 0., 0.), 1., Color::BLACK);
+                }
 
-                            // NOTE(cmc): Raylib draws cube from their center of
-                            // gravity, not their corner, i.e.:
-                            // rlVertex3f(x + width/2, y + height/2, z - length/2);
-                            // rlVertex3f(x + width/2, y - height/2, z - length/2);
-                            // rlVertex3f(x - width/2, y + height/2, z - length/2);
-                            //
-                            // Hence `pos + dim / 2.0`.
-                            let pos: Vec3 = (*pos + (*dim / 2.0)).into();
-                            d2.draw_cube(pos, dim.x, dim.y, dim.z, color);
-                            d2.draw_cube_wires(pos, dim.x, dim.y, dim.z, Color::BLACK);
+                for (shape, &CompColor(color)) in (&shapes, &colors).join() {
+                    match shape {
+                        CompDirectShape::WireFrame { vertices } => {
+                            for points in vertices.windows(2) {
+                                d2.draw_line_3d(points[0], points[1], color);
+                            }
                         }
-                        &CompMesh::Line { a, b } => {
-                            d2.draw_line_3d(a, b, color);
-                        }
+                        CompDirectShape::Rect { .. } => {}
                     }
                 }
             }
 
-            for (mesh, &CompPos2D(pos), &CompColor(color)) in (&meshes, &pos2Ds, &colors).join() {
-                match mesh {
-                    CompMesh::Rect { dimensions } => {
+            for (shape, &CompColor(color)) in (&shapes, &colors).join() {
+                match shape {
+                    CompDirectShape::Rect { pos, dimensions } => {
                         let dim = dimensions;
                         d.draw_rectangle(pos.x, pos.y, dim.x, dim.y, color.fade(0.1));
                         d.draw_rectangle_lines(pos.x, pos.y, dim.x, dim.y, color);
                     }
-                    CompMesh::Cube { .. } => {}
-                    CompMesh::Line { .. } => {}
+                    CompDirectShape::WireFrame { .. } => {}
                 }
             }
 

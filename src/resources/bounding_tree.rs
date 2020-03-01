@@ -18,11 +18,8 @@ struct BoundingValue {
 }
 
 impl BoundingValue {
-    pub fn new(e: Entity, pos: Vec3, dim: Vec3) -> Self {
-        let pos1: Point3 = (pos.x, pos.y, pos.z).into();
-        let pos2 = *pos1 + *dim;
-        let pos2 = (pos2.x, pos2.y, pos2.z).into();
-        let aabb = Aabb3::new(*pos1, pos2);
+    pub fn new(e: Entity, min: Point3, max: Point3) -> Self {
+        let aabb = Aabb3::new(*min, *max);
         Self { e, aabb }
     }
 }
@@ -57,7 +54,7 @@ impl BoundingTree {
 }
 
 impl BoundingTree {
-    pub fn update_entity(&mut self, e: Entity, pos: Vec3, dim: Vec3) {
+    pub fn update_entity(&mut self, e: Entity, min: Point3, max: Point3) {
         let this = UnsafeCell::new(self);
         let mutself = move || -> &mut Self { unsafe { *this.get() } };
         mutself()
@@ -66,9 +63,9 @@ impl BoundingTree {
             .and_modify(|idx| {
                 mutself()
                     .inner
-                    .update_node(*idx, BoundingValue::new(e, pos, dim))
+                    .update_node(*idx, BoundingValue::new(e, min, max))
             })
-            .or_insert_with(|| mutself().inner.insert(BoundingValue::new(e, pos, dim)));
+            .or_insert_with(|| mutself().inner.insert(BoundingValue::new(e, min, max)));
     }
 
     pub fn refresh(&mut self) {
