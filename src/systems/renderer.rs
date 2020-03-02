@@ -71,10 +71,18 @@ impl<'a> System<'a> for Renderer {
                         color
                     };
 
+                    // d2.draw_cube(
+                    //     Vector3::new(transform.w.x, transform.w.y, transform.w.z),
+                    //     2.,
+                    //     2.,
+                    //     2.,
+                    //     Color::RED,
+                    // );
+
                     // TODO(cmc): needs interior mutability... or a transform
                     // dedicated system?
                     model.set_transform(&transform.into());
-                    d2.draw_model(model, Vector3::new(0., 0., 0.), 1., color);
+                    d2.draw_model(model, Vector3::new(0., 0., 0.), 1., Color::WHITE);
                     d2.draw_model_wires(model, Vector3::new(0., 0., 0.), 1., Color::BLACK);
                 }
 

@@ -45,10 +45,13 @@ fn main() {
     world.insert(ResrcModelView::default());
     world.insert(ResrcProjection::default());
 
+    let tex = raylib::core::texture::Image::gen_image_color(1, 1, raylib::color::Color::GREEN);
+    let mut tex = rl.load_texture_from_image(&rl_thread, &tex).unwrap();
+    tex.gen_texture_mipmaps();
     let meshes = ResrcMeshStore::new(&rl_thread);
     for x in -10..=10 {
         for z in -10..=10 {
-            let cube = meshes.instantiate_model(&mut rl, &rl_thread, ResrcMeshStore::CUBE);
+            let cube = meshes.instantiate_model(&mut rl, &rl_thread, ResrcMeshStore::CUBE, &tex);
             let cube = CompModel3D(cube);
             let transform = CGMat4::from_translation((x as f32 * 4.0, 0.0, z as f32 * 4.0).into());
             let transform = transform * CGMat4::from_scale(2.);

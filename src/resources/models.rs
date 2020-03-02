@@ -78,9 +78,12 @@ impl MeshStore {
         rl: &mut RaylibHandle,
         rl_thread: &RaylibThread,
         mesh_id: MeshID,
+        tex: &raylib::texture::Texture2D,
     ) -> Model {
+        use raylib::{ffi::MaterialMapType, models::RaylibMaterial};
         let mesh = &self.meshes[mesh_id.0];
-        let model = rl.load_model_from_mesh(rl_thread, &mesh).unwrap();
+        let mut model = rl.load_model_from_mesh(rl_thread, &mesh).unwrap();
+        model.materials_mut()[0].set_material_texture(MaterialMapType::MAP_ALBEDO, &tex);
 
         Model(ManuallyDrop::new(model))
     }

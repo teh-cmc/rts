@@ -25,7 +25,7 @@ impl<'a> System<'a> for BoundingTree {
             let min = *transform.0 * *min;
             let max = *transform.0 * *max;
 
-            eprintln!("{:?} invalidated", e);
+            // eprintln!("{:?} invalidated", e);
             bt.update_entity(
                 e,
                 (min.x, min.y, min.z).into(),
