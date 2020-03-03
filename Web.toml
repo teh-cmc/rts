@@ -16,6 +16,7 @@ minimum-version = "0.6.0"
 link-args = [
     "-O2",
     "-s", "ALLOW_MEMORY_GROWTH=1",
+    # "-s", "ASSERTIONS=1",
     "-s", "ASSERTIONS=0",
     "-s", "ASYNCIFY",
     # "-s", "ASYNCIFY_IGNORE_INDIRECT",
@@ -27,4 +28,5 @@ link-args = [
     "-s", "USE_PTHREADS=0",
     "-s", "WASM=1",
     "-s", "WASM_MEM_MAX=1073741824",
+    # "--profiling",
 ]

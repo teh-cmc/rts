@@ -45,7 +45,7 @@ fn main() {
     world.insert(ResrcModelView::default());
     world.insert(ResrcProjection::default());
 
-    let tex = raylib::core::texture::Image::gen_image_color(1, 1, raylib::color::Color::GREEN);
+    let tex = raylib::core::texture::Image::gen_image_color(1, 1, Color::WHITE);
     let mut tex = rl.load_texture_from_image(&rl_thread, &tex).unwrap();
     tex.gen_texture_mipmaps();
     let meshes = ResrcMeshStore::new(&rl_thread);
