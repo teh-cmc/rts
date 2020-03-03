@@ -96,7 +96,7 @@ impl<'a> System<'a> for Renderer {
                     match shape {
                         CompDirectShape::WireFrame { vertices } => {
                             for points in vertices.windows(2) {
-                                d2.draw_line_3d(points[0], points[1], color);
+                                d2.draw_line_3d(points[1], points[0], color);
                             }
                         }
                         CompDirectShape::Rect { .. } => {}

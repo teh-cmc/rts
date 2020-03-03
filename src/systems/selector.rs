@@ -110,12 +110,12 @@ impl<'a> System<'a> for Selector {
                         let (x, y) = ((2. * pos.0) / swidth - 1., 1. - (2. * pos.1) / sheight);
 
                         let near: Point3 = {
-                            let pos: Vec4 = (x, y, 0., 1.).into();
+                            let pos: Vec4 = (x, y, 0.999, 1.).into();
                             let pos = mat * *pos;
                             (pos.x / pos.w, pos.y / pos.w, pos.z / pos.w).into()
                         };
                         let far: Point3 = {
-                            let pos: Vec4 = (x, y, 1., 1.).into();
+                            let pos: Vec4 = (x, y, 0.99999, 1.).into();
                             let pos = mat * *pos;
                             (pos.x / pos.w, pos.y / pos.w, pos.z / pos.w).into()
                         };
@@ -123,6 +123,7 @@ impl<'a> System<'a> for Selector {
                         (near, far)
                     })
                     .collect();
+                dbg!(&corners);
 
                 selected.clear();
                 corners
@@ -147,9 +148,10 @@ impl<'a> System<'a> for Selector {
                     /* far */ (corners[0].1, corners[1].1, corners[2].1, corners[3].1),
                 ];
 
+                shapes.clear();
                 for p in &planes {
                     let wf = CompDirectShape::WireFrame {
-                        vertices: vec![p.0, p.1, p.2, p.3],
+                        vertices: vec![p.0, p.1, p.2, p.3, p.0],
                     };
                     let color = CompColor(Color::BLACK);
 
@@ -163,23 +165,42 @@ impl<'a> System<'a> for Selector {
                 let frustum = (|| {
                     macro_rules! plane {
                         ($p1:expr, $p2:expr, $p3:expr) => {
-                            Plane::from_points($p1, $p2, $p3).ok_or(anyhow!("illegal plane"))
+                            Plane::from_points($p1, $p2, $p3)
+                                .ok_or(anyhow!("illegal plane"))?
+                                .normalize()
+                                .ok_or(anyhow!("illegal plane"))
                         };
                     }
+                    // let f = Frustum::new(
+                    //     /* lft */ plane!(*planes[0].0, *planes[0].1, *planes[0].2)?,
+                    //     /* rgt */ plane!(*planes[1].0, *planes[1].1, *planes[1].2)?,
+                    //     /* btm */ plane!(*planes[2].0, *planes[2].1, *planes[2].2)?,
+                    //     /* top */ plane!(*planes[3].0, *planes[3].1, *planes[3].2)?,
+                    //     /* nar */ plane!(*planes[4].0, *planes[4].1, *planes[4].2)?,
+                    //     /* far */ plane!(*planes[5].0, *planes[5].1, *planes[5].2)?,
+                    // );
                     let f = Frustum::new(
-                        /* lft */
-                        plane!(*planes[0].0, *planes[0].1, *planes[0].2)?,
-                        /* rgt */
-                        plane!(*planes[1].0, *planes[1].1, *planes[1].2)?,
-                        /* btm */
-                        plane!(*planes[2].0, *planes[2].1, *planes[2].2)?,
-                        /* top */
-                        plane!(*planes[3].0, *planes[3].1, *planes[3].2)?,
-                        /* nar */
-                        plane!(*planes[4].0, *planes[4].1, *planes[4].2)?,
-                        /* far */
-                        plane!(*planes[5].0, *planes[5].1, *planes[5].2)?,
+                        /* lft */ plane!(*planes[0].0, *planes[0].1, *planes[0].2)?,
+                        /* rgt */ plane!(*planes[1].0, *planes[1].1, *planes[1].2)?,
+                        /* btm */ plane!(*planes[2].0, *planes[2].1, *planes[2].2)?,
+                        /* top */ plane!(*planes[3].0, *planes[3].1, *planes[3].2)?,
+                        /* nar */ plane!(*planes[4].0, *planes[4].1, *planes[4].2)?,
+                        /* far */ plane!(*planes[5].0, *planes[5].1, *planes[5].2)?,
                     );
+
+                    {
+                        let lft = plane!(*planes[0].0, *planes[0].1, *planes[0].2)?;
+                        let rgt = plane!(*planes[1].0, *planes[1].1, *planes[1].2)?;
+                        let btm = plane!(*planes[2].0, *planes[2].1, *planes[2].2)?;
+                        let nar = plane!(*planes[4].0, *planes[4].1, *planes[4].2)?;
+                        let far = plane!(*planes[5].0, *planes[5].1, *planes[5].2)?;
+
+                        use collision::prelude::*;
+                        dbg!(lft.intersection(&btm));
+                        dbg!(lft.intersection(&rgt));
+                        dbg!(nar.intersection(&far));
+                    }
+
                     Ok::<_, AnyError>(f)
                 })();
 
@@ -188,7 +209,6 @@ impl<'a> System<'a> for Selector {
                 }
                 let frustum = frustum.unwrap();
 
-                // selected.clear();
                 dbg!(frustum);
                 use cgmath::Rad;
                 use collision::{Aabb3, Projection, Relation, Sphere};
