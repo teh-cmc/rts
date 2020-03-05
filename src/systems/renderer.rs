@@ -102,6 +102,20 @@ impl<'a> System<'a> for Renderer {
                         CompDirectShape::Rect { .. } => {}
                     }
                 }
+
+                // TODO(cmc): Poor man's axes
+                {
+                    let p1: Point3 = (0., 0., 0.).into();
+
+                    let x: Point3 = (1000., 0., 0.).into();
+                    d2.draw_line_3d(p1, x, Color::DARKGREEN);
+
+                    let y: Point3 = (0., 1000., 0.).into();
+                    d2.draw_line_3d(p1, y, Color::YELLOW);
+
+                    let z: Point3 = (0., 0., 1000.).into();
+                    d2.draw_line_3d(p1, z, Color::MAROON);
+                }
             }
 
             for (shape, &CompColor(color)) in (&shapes, &colors).join() {

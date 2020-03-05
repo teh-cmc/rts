@@ -1,5 +1,6 @@
 use crate::{components::prelude::*, maths::prelude::*, resources::prelude::*};
 use anyhow::{anyhow, Error as AnyError, Result as AnyResult};
+use collision::{Frustum, Plane};
 use raylib::color::Color;
 use specs::prelude::*;
 
@@ -104,7 +105,7 @@ impl<'a> System<'a> for Selector {
                     (pos.x as f32, pos.y as f32 + dim.y as f32),
                 ];
 
-                let corners: Vec<_> = corners
+                let mut corners: Vec<_> = corners
                     .into_iter()
                     .map(|pos| {
                         let (x, y) = ((2. * pos.0) / swidth - 1., 1. - (2. * pos.1) / sheight);
@@ -123,7 +124,6 @@ impl<'a> System<'a> for Selector {
                         (near, far)
                     })
                     .collect();
-                dbg!(&corners);
 
                 selected.clear();
                 corners
@@ -138,7 +138,14 @@ impl<'a> System<'a> for Selector {
                         }
                     });
 
-                use collision::{Frustum, Plane};
+                // NOTE(cmc): X and Z axes are flipped within collision's
+                // `Frustum`.
+                for corner in &mut corners {
+                    corner.0.x *= -1.;
+                    corner.0.z *= -1.;
+                    corner.1.x *= -1.;
+                    corner.1.z *= -1.;
+                }
                 let planes = vec![
                     /* lft */ (corners[0].0, corners[0].1, corners[3].1, corners[3].0),
                     /* rgt */ (corners[1].0, corners[1].1, corners[2].1, corners[2].0),
@@ -147,20 +154,6 @@ impl<'a> System<'a> for Selector {
                     /* nar */ (corners[0].0, corners[1].0, corners[2].0, corners[3].0),
                     /* far */ (corners[0].1, corners[1].1, corners[2].1, corners[3].1),
                 ];
-
-                shapes.clear();
-                for p in &planes {
-                    let wf = CompDirectShape::WireFrame {
-                        vertices: vec![p.0, p.1, p.2, p.3, p.0],
-                    };
-                    let color = CompColor(Color::BLACK);
-
-                    let _ = entities
-                        .build_entity()
-                        .with(wf, &mut shapes)
-                        .with(color, &mut colors)
-                        .build();
-                }
 
                 let frustum = (|| {
                     macro_rules! plane {
@@ -171,36 +164,14 @@ impl<'a> System<'a> for Selector {
                                 .ok_or(anyhow!("illegal plane"))
                         };
                     }
-                    // let f = Frustum::new(
-                    //     /* lft */ plane!(*planes[0].0, *planes[0].1, *planes[0].2)?,
-                    //     /* rgt */ plane!(*planes[1].0, *planes[1].1, *planes[1].2)?,
-                    //     /* btm */ plane!(*planes[2].0, *planes[2].1, *planes[2].2)?,
-                    //     /* top */ plane!(*planes[3].0, *planes[3].1, *planes[3].2)?,
-                    //     /* nar */ plane!(*planes[4].0, *planes[4].1, *planes[4].2)?,
-                    //     /* far */ plane!(*planes[5].0, *planes[5].1, *planes[5].2)?,
-                    // );
                     let f = Frustum::new(
-                        /* lft */ plane!(*planes[0].0, *planes[0].1, *planes[0].2)?,
-                        /* rgt */ plane!(*planes[1].0, *planes[1].1, *planes[1].2)?,
-                        /* btm */ plane!(*planes[2].0, *planes[2].1, *planes[2].2)?,
-                        /* top */ plane!(*planes[3].0, *planes[3].1, *planes[3].2)?,
-                        /* nar */ plane!(*planes[4].0, *planes[4].1, *planes[4].2)?,
+                        /* nar */ plane!(*planes[4].2, *planes[4].1, *planes[4].0)?,
                         /* far */ plane!(*planes[5].0, *planes[5].1, *planes[5].2)?,
+                        /* lft */ plane!(*planes[0].0, *planes[0].1, *planes[0].2)?,
+                        /* rgt */ plane!(*planes[1].2, *planes[1].1, *planes[1].0)?,
+                        /* btm */ plane!(*planes[2].0, *planes[2].1, *planes[2].2)?,
+                        /* top */ plane!(*planes[3].2, *planes[3].1, *planes[3].0)?,
                     );
-
-                    {
-                        let lft = plane!(*planes[0].0, *planes[0].1, *planes[0].2)?;
-                        let rgt = plane!(*planes[1].0, *planes[1].1, *planes[1].2)?;
-                        let btm = plane!(*planes[2].0, *planes[2].1, *planes[2].2)?;
-                        let nar = plane!(*planes[4].0, *planes[4].1, *planes[4].2)?;
-                        let far = plane!(*planes[5].0, *planes[5].1, *planes[5].2)?;
-
-                        use collision::prelude::*;
-                        dbg!(lft.intersection(&btm));
-                        dbg!(lft.intersection(&rgt));
-                        dbg!(nar.intersection(&far));
-                    }
-
                     Ok::<_, AnyError>(f)
                 })();
 
@@ -209,14 +180,6 @@ impl<'a> System<'a> for Selector {
                 }
                 let frustum = frustum.unwrap();
 
-                dbg!(frustum);
-                use cgmath::Rad;
-                use collision::{Aabb3, Projection, Relation, Sphere};
-                dbg!(frustum.contains(&Sphere {
-                    center: (0f32, 0f32, 0f32).into(),
-                    radius: 1f32,
-                }));
-                dbg!(frustum.contains(&Aabb3::new((0., 0., 0.).into(), (10., 10., 10.).into())));
                 for e in bt.test_frustum(&frustum).collect::<Vec<_>>() {
                     selected.insert(e, CompSelected).unwrap();
                 }

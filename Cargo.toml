@@ -13,6 +13,7 @@ anyhow = "1.0"
 arr_macro = "0.1"
 cgmath = "0.17"
 collision = "0.20"
+# collision = { path = "../../rustgd/collision-rs" }
 rand = "0.7"
 # raylib = { path = "../../deltaphc/raylib-rs/raylib" }
 # raylib = { git = "https://github.com/deltaphc/raylib-rs", branch = "master" }
