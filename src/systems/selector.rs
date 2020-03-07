@@ -28,34 +28,19 @@ impl Default for Selector {
 impl<'a> System<'a> for Selector {
     type SystemData = (
         Entities<'a>,
-        WriteExpect<'a, ResrcRaylib>,
+        ReadExpect<'a, ResrcRaylib>,
         ReadExpect<'a, ResrcMouseState>,
         ReadExpect<'a, ResrcBoundingTree>,
         ReadExpect<'a, ResrcProjection>,
         ReadExpect<'a, ResrcModelView>,
-        ReadExpect<'a, ResrcMeshStore>,
         WriteStorage<'a, CompDirectShape>,
-        WriteStorage<'a, CompModel3D>,
-        WriteStorage<'a, CompTransform3D>,
         WriteStorage<'a, CompSelected>,
         WriteStorage<'a, CompColor>,
     );
 
     fn run(&mut self, sys_data: Self::SystemData) {
-        let (
-            entities,
-            mut rl,
-            mouse,
-            bt,
-            m_proj,
-            m_view,
-            meshes,
-            mut shapes,
-            mut models,
-            mut transforms,
-            mut selected,
-            mut colors,
-        ) = sys_data;
+        let (entities, rl, mouse, bt, m_proj, m_view, mut shapes, mut selected, mut colors) =
+            sys_data;
 
         match self.state {
             SelectorState::Idle => {
