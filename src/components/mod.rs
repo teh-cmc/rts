@@ -3,6 +3,7 @@ use crate::{
     resources::prelude::Model,
 };
 use specs::{prelude::*, storage::HashMapStorage, Component};
+use std::sync::Arc;
 
 pub mod prelude {
     pub use super::{
@@ -34,7 +35,7 @@ pub enum DirectShape {
 
 #[derive(Debug, Component)]
 #[storage(VecStorage)]
-pub struct Model3D(pub Model);
+pub struct Model3D(pub Arc<Model>);
 
 #[derive(Clone, Copy, Debug, Component)]
 #[storage(VecStorage)]

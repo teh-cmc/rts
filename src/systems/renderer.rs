@@ -45,6 +45,7 @@ impl<'a> System<'a> for Renderer {
         let thread = self.0.as_ref().unwrap();
         let (swidth, sheight) = (rl.read(|rl| rl.get_screen_width() - 100), 40);
         let (x, y) = rl.read(|rl| (rl.get_mouse_x() as f32, rl.get_mouse_y() as f32));
+        // TODO(cmc): only render what's visible in the frustrum.
         rl.draw(&thread, |d| {
             d.clear_background(Color::DARKGRAY);
 
@@ -57,6 +58,7 @@ impl<'a> System<'a> for Renderer {
                 *m_view.0 = *hacks::get_matrix_modelview();
                 *m_proj.0 = *hacks::get_matrix_projection();
 
+                let start = std::time::Instant::now();
                 for (
                     e,
                     &mut CompModel3D(ref mut model),
@@ -73,13 +75,18 @@ impl<'a> System<'a> for Renderer {
 
                     // TODO(cmc): needs interior mutability... or a transform
                     // dedicated system?
-                    model.set_transform(&transform.into());
-                    d2.draw_model(model, Vector3::zero(), 1., color);
+                    // model.set_transform(&transform.into());
+                    d2.draw_model(
+                        model,
+                        Vector3::new(transform.w.x, transform.w.y, transform.w.z),
+                        1.,
+                        color,
+                    );
 
                     // NOTE(cmc): draw_model_wires is bugged to death when
                     // running through emscripten; haven't digged into it yet...
-                    #[cfg(not(target_os = "emscripten"))]
-                    d2.draw_model_wires(model, Vector3::zero(), 1.0, Color::BLACK);
+                    // #[cfg(not(target_os = "emscripten"))]
+                    // d2.draw_model_wires(model, Vector3::zero(), 1.0, Color::BLACK);
                     #[cfg(target_os = "emscripten")]
                     {
                         d2.draw_cube_wires(
@@ -91,6 +98,7 @@ impl<'a> System<'a> for Renderer {
                         );
                     }
                 }
+                dbg!(start.elapsed());
 
                 for (shape, &CompColor(color)) in (&shapes, &colors).join() {
                     match shape {

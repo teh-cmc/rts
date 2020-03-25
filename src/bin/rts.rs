@@ -45,25 +45,27 @@ fn main() {
     world.insert(ResrcModelView::default());
     world.insert(ResrcProjection::default());
 
-    let tex = raylib::core::texture::Image::gen_image_color(1, 1, Color::WHITE);
-    let mut tex = rl.load_texture_from_image(&rl_thread, &tex).unwrap();
-    tex.gen_texture_mipmaps();
+    const TEAPOT_PATH: &str = "/home/cmc/dev/ephtracy/voxel-model/vox/scan/teapot.vox";
     let meshes = ResrcMeshStore::new(&rl_thread);
-    for x in -10..=10 {
-        for z in -10..=10 {
-            let cube = meshes.instantiate_model(&mut rl, &rl_thread, ResrcMeshStore::CUBE, &tex);
-            let cube = CompModel3D(cube);
-            let transform = CGMat4::from_translation((x as f32 * 4.0, 0.0, z as f32 * 4.0).into());
-            let transform = transform * CGMat4::from_scale(2.);
-            world
-                .create_entity()
-                .with(CompTransform3D(transform.into()))
-                .with(cube)
-                .with(CompInvalidated)
-                .with(CompColor(Color::RED))
-                .build();
-        }
-    }
+    vox::load(&mut rl, &rl_thread, &meshes, &mut world, TEAPOT_PATH).unwrap();
+    // let tex = raylib::core::texture::Image::gen_image_color(1, 1, Color::WHITE);
+    // let mut tex = rl.load_texture_from_image(&rl_thread, &tex).unwrap();
+    // tex.gen_texture_mipmaps();
+    // for x in -100..=100 {
+    //     for z in -10..=10 {
+    //         let cube = meshes.instantiate_model(&mut rl, &rl_thread,
+    // ResrcMeshStore::CUBE, &tex);         let cube = CompModel3D(cube);
+    //         let transform = CGMat4::from_translation((x as f32 * 4.0, 0.0, z as
+    // f32 * 4.0).into());         let transform = transform *
+    // CGMat4::from_scale(2.);         world
+    //             .create_entity()
+    //             .with(CompTransform3D(transform.into()))
+    //             .with(cube)
+    //             .with(CompInvalidated)
+    //             .with(CompColor(Color::RED))
+    //             .build();
+    //     }
+    // }
     world.insert(meshes);
 
     let mut rl = ResrcRaylib::new(rl);
@@ -114,6 +116,47 @@ fn main() {
             dispatcher.dispatch(&mut world);
             world.maintain();
         }
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+mod vox {
+    use super::*;
+    use anyhow::{anyhow, Error as AnyError, Result as AnyResult};
+    use std::sync::Arc;
+
+    pub fn load(
+        rl: &mut RaylibHandle,
+        rl_thread: &RaylibThread,
+        meshes: &ResrcMeshStore,
+        world: &mut World,
+        path: &str,
+    ) -> AnyResult<()> {
+        let tex = raylib::core::texture::Image::gen_image_color(1, 1, Color::WHITE);
+        let mut tex = rl.load_texture_from_image(&rl_thread, &tex).unwrap();
+        tex.gen_texture_mipmaps();
+        let cube = meshes.instantiate_model(rl, rl_thread, ResrcMeshStore::CUBE, &tex);
+        let cube = Arc::new(cube);
+
+        let data = dot_vox::load(path).map_err(|msg| anyhow!("{}", msg))?;
+        for model in data.models {
+            dbg!(model.voxels.len());
+            for voxel in model.voxels {
+                let cube = CompModel3D(Arc::clone(&cube));
+                let transform = CGMat4::from_translation(
+                    (voxel.x as f32, voxel.y as f32, voxel.z as f32).into(),
+                );
+                world
+                    .create_entity()
+                    .with(CompTransform3D(transform.into()))
+                    .with(cube)
+                    .with(CompInvalidated)
+                    .with(CompColor(Color::RED))
+                    .build();
+            }
+        }
+        Ok::<_, AnyError>(())
     }
 }
 
