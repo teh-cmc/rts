@@ -1,8 +1,8 @@
 .PHONY: desktop web
 
 desktop:
-	RUST_BACKTRACE=1 cargo run --verbose --release --features parallel
-	# RUST_BACKTRACE=1 cargo run --verbose --features parallel
+	RUST_BACKTRACE=1 cargo run --verbose --features parallel
+	# RUST_BACKTRACE=1 cargo run --verbose --release --features parallel
 
 web:
 	RUST_BACKTRACE=1 cargo web start --verbose --release --use-system-emscripten --host 0.0.0.0

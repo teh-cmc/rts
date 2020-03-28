@@ -81,7 +81,6 @@ impl MeshStore {
         mesh_id: MeshID,
         tex: &raylib::texture::Texture2D,
     ) -> Model {
-        dbg!("lol");
         use raylib::{ffi::MaterialMapType, models::RaylibMaterial};
         let mesh = &self.meshes[mesh_id.0];
         let mut model = rl.load_model_from_mesh(rl_thread, &mesh).unwrap();

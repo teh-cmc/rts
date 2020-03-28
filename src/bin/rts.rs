@@ -3,6 +3,7 @@
 use raylib::prelude::*;
 use rts::{components::prelude::*, maths::prelude::*, resources::prelude::*, systems::prelude::*};
 use specs::{prelude::*, WorldExt};
+use std::sync::Arc;
 
 // -----------------------------------------------------------------------------
 
@@ -45,19 +46,30 @@ fn main() {
     world.insert(ResrcModelView::default());
     world.insert(ResrcProjection::default());
 
-    const TEAPOT_PATH: &str = "/home/cmc/dev/ephtracy/voxel-model/vox/scan/teapot.vox";
-    let meshes = ResrcMeshStore::new(&rl_thread);
-    vox::load(&mut rl, &rl_thread, &meshes, &mut world, TEAPOT_PATH).unwrap();
-    // let tex = raylib::core::texture::Image::gen_image_color(1, 1, Color::WHITE);
-    // let mut tex = rl.load_texture_from_image(&rl_thread, &tex).unwrap();
+    let model = rts::voxel::VoxelModel::from_vox(include_bytes!(
+        "/home/cmc/dev/ephtracy/voxel-model/vox/scan/teapot.vox"
+    ))
+    .unwrap();
+
+    for m in model.iter() {
+        dbg!(m.stats());
+    }
+
+    // const TEAPOT_PATH: &str =
+    // "/home/cmc/dev/ephtracy/voxel-model/vox/scan/teapot.vox"; let meshes =
+    // ResrcMeshStore::new(&rl_thread); vox::load(&mut rl, &rl_thread, &meshes,
+    // &mut world, TEAPOT_PATH).unwrap(); let tex = raylib::core::texture::
+    // Image::gen_image_color(1, 1, Color::WHITE); let mut tex =
+    // rl.load_texture_from_image(&rl_thread, &tex).unwrap();
     // tex.gen_texture_mipmaps();
-    // for x in -100..=100 {
+    // for x in -10..=10 {
     //     for z in -10..=10 {
     //         let cube = meshes.instantiate_model(&mut rl, &rl_thread,
-    // ResrcMeshStore::CUBE, &tex);         let cube = CompModel3D(cube);
-    //         let transform = CGMat4::from_translation((x as f32 * 4.0, 0.0, z as
-    // f32 * 4.0).into());         let transform = transform *
-    // CGMat4::from_scale(2.);         world
+    // ResrcMeshStore::CUBE, &tex);         let cube =
+    // CompModel3D(Arc::new(cube));         let transform =
+    // CGMat4::from_translation((x as f32 * 2.0, 0.0, z as f32 * 2.0).into());
+    //         let transform = transform * CGMat4::from_scale(2.);
+    //         world
     //             .create_entity()
     //             .with(CompTransform3D(transform.into()))
     //             .with(cube)
@@ -66,11 +78,12 @@ fn main() {
     //             .build();
     //     }
     // }
-    world.insert(meshes);
+    // world.insert(meshes);
 
     let mut rl = ResrcRaylib::new(rl);
     world.insert(rl.clone());
 
+    // TODO(cmc): switchable cameras (esp. free mode for debugging)
     let cam = {
         let inner = Camera3D::perspective(
             Vector3::zero(),

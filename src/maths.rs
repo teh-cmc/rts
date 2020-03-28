@@ -420,6 +420,76 @@ impl Into<RawVec3> for Vec3 {
 
 // -----------------------------------------------------------------------------
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Vec3i(CGVec3<i32>);
+
+/* Deref to cgmath */
+
+impl Deref for Vec3i {
+    type Target = CGVec3<i32>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl DerefMut for Vec3i {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+/* Instantiate from cgmath */
+
+impl<T> From<T> for Vec3i
+where
+    T: Into<CGVec3<i32>>,
+{
+    fn from(m: T) -> Self {
+        Self(m.into())
+    }
+}
+
+/* Instantiate from Raylib Rust */
+
+// impl From<RVec3> for Vec3i {
+//     fn from(v: RVec3) -> Self {
+//         let v = CGVec3::new(v.x as i32, v.y as i32);
+//         Self(v)
+//     }
+// }
+// impl From<&RVec3> for Vec3i {
+//     fn from(m: &RVec3) -> Self {
+//         Self::from(m.clone())
+//     }
+// }
+
+/* Instantiate from Raylib C */
+
+// impl From<RawVec3> for Vec3i {
+//     fn from(m: RawVec3) -> Self {
+//         Self::from(RVec3::from(m))
+//     }
+// }
+// impl From<&RawVec3> for Vec3i {
+//     fn from(m: &RawVec3) -> Self {
+//         Self::from(m.clone())
+//     }
+// }
+
+/* Feed directly to Raylib C */
+
+impl Into<RawVec3> for Vec3i {
+    fn into(self) -> RawVec3 {
+        RawVec3 {
+            x: self.0.x as f32,
+            y: self.0.y as f32,
+            z: self.0.z as f32,
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+
 #[derive(Debug, Clone, Copy)]
 pub struct Vec4(CGVec4<f32>);
 

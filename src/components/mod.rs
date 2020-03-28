@@ -33,6 +33,8 @@ pub enum DirectShape {
     WireFrame { vertices: Vec<Point3> },
 }
 
+// -----------------------------------------------------------------------------
+
 #[derive(Debug, Component)]
 #[storage(VecStorage)]
 pub struct Model3D(pub Arc<Model>);
