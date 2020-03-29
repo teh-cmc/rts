@@ -57,7 +57,9 @@ impl<'a> System<'a> for Renderer {
         rl.draw(&thread, |d| {
             d.clear_background(Color::DARKGRAY);
 
-            let start = std::time::Instant::now();
+            let render_start = std::time::Instant::now();
+            let mut render_voxels = 0;
+            let mut render_triangles = 0;
             {
                 let mut d2 = d.begin_mode_3D(cam.raw());
 
@@ -80,13 +82,21 @@ impl<'a> System<'a> for Renderer {
                     use raylib::core::math::Vector3 as RayVector3;
                     let dims: RayVector3 = (1., 1., 1.).into();
 
-                    let voxels = model
+                    let model_stats = model.stats();
+                    render_voxels += model_stats.nb_voxels;
+                    render_triangles += model_stats.nb_triangles;
+
+                    let voxels: Vec<_> = model
                         .iter()
                         .filter(|(_, voxel)| *voxel)
-                        .map(|(pos, _)| **world_pos + *pos);
-                    for pos in voxels {
-                        let pos: RayVector3 = (pos.x as f32, pos.y as f32, pos.z as f32).into();
+                        .map(|(pos, _)| **world_pos + *pos)
+                        .map(|pos| RayVector3::from((pos.x as f32, pos.y as f32, pos.z as f32)))
+                        .collect();
+                    for pos in voxels.iter() {
                         d2.draw_cube_v(pos, dims, color);
+                    }
+                    for pos in voxels.iter() {
+                        d2.draw_cube_wires(pos, dims.x, dims.y, dims.z, Color::BLACK);
                     }
                 }
 
@@ -128,7 +138,7 @@ impl<'a> System<'a> for Renderer {
                     CompDirectShape::WireFrame { .. } => {}
                 }
             }
-            let render_time = start.elapsed();
+            let render_time = render_start.elapsed();
 
             d.draw_fps(swidth - 100, 10);
             imgui::draw_cursor(d, x, y);
@@ -145,10 +155,12 @@ impl<'a> System<'a> for Renderer {
             #[rustfmt::skip]
             imgui::draw_debug_info(
                 d,
-                10, sheight - 60, 150, 0, 10,
+                10, sheight - 80, 150, 0, 10,
                 "Rendering stats:".into(),
                 &[
                     format!("- Duration: {:?}", render_time).as_str(),
+                    format!("- Voxels: {:#?}", render_voxels).as_str(),
+                    format!("- Triangles: {:#?}", render_triangles).as_str(),
                 ],
             );
         });

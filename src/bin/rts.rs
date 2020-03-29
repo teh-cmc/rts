@@ -50,7 +50,6 @@ fn main() {
         "/home/cmc/dev/ephtracy/voxel-model/vox/scan/teapot.vox"
     ))
     .unwrap();
-
     for model in models.into_iter() {
         world
             .create_entity()
@@ -60,6 +59,14 @@ fn main() {
             .with(CompColor(Color::RED))
             .build();
     }
+
+    // world
+    //     .create_entity()
+    //     .with(CompVoxelModel(rts::voxel::VoxelModel::checkerboard()))
+    //     .with(CompGridPosition((0, 0, 0).into()))
+    //     .with(CompInvalidated)
+    //     .with(CompColor(Color::RED))
+    //     .build();
 
     // const TEAPOT_PATH: &str =
     // "/home/cmc/dev/ephtracy/voxel-model/vox/scan/teapot.vox"; let meshes =

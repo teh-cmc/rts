@@ -24,7 +24,7 @@ impl Camera {
             inner,
             x_rad: Self::PI * 0.25,
             y_rad: -Self::PI * 0.25,
-            radius: 100.0,
+            radius: 1000.0,
         }
     }
 
@@ -66,7 +66,8 @@ impl Camera {
         }
 
         self.y_rad += zoom as f32 * delta.0 * 10. * Self::PI / 180.0;
-        self.y_rad = self.y_rad.max(-Self::PI / 3.0).min(-Self::PI * 0.15);
+        // self.y_rad = self.y_rad.max(-Self::PI / 3.0).min(-Self::PI * 0.15);
+        self.y_rad = self.y_rad.max(-Self::PI / 3.0).min(Self::PI / 3.);
         self.pos.y = Self::Y * 2. * self.y_rad.abs();
 
         self.inner.position = (self.pos.x, self.pos.y, self.pos.z).into();

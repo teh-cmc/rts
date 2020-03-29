@@ -11,7 +11,7 @@ use std::collections::HashMap;
 // TODO(cmc): new types for world pos vs. local pos?
 
 // VoxelChunk are identified by the coordinates of their lower-left corner.
-pub struct VoxelChunk {
+struct VoxelChunk {
     // world_pos: Vec3i,
     voxels: [bool; Self::SIZE * Self::SIZE * Self::SIZE],
 }
@@ -45,15 +45,13 @@ impl VoxelChunk {
 
             x += 1;
             if x >= Self::SIZE as i32 {
+                x = 0;
                 y += 1;
             }
             if y >= Self::SIZE as i32 {
-                z += 1;
-            }
-            if z >= Self::SIZE as i32 {
                 x = 0;
                 y = 0;
-                z = 0;
+                z += 1;
             }
 
             res
@@ -71,7 +69,7 @@ impl VoxelChunk {
     pub fn checkerboard() -> Self {
         let mut vc = Self::default();
         vc.voxels.iter_mut().enumerate().for_each(|(i, v)| {
-            if i % 2 == 0 {
+            if i % 3 == 0 {
                 *v = true;
             }
         });
@@ -108,6 +106,13 @@ impl VoxelModel {
 }
 
 impl VoxelModel {
+    pub fn checkerboard() -> Self {
+        let mut chunks = HashMap::with_capacity(1);
+        chunks.insert((0, 0, 0).into(), VoxelChunk::checkerboard());
+
+        Self { chunks }
+    }
+
     pub fn from_vox(data: &[u8]) -> AnyResult<Vec<VoxelModel>> {
         let data = dot_vox::load_bytes(data).map_err(|msg| anyhow!("{}", msg))?;
         let models = data
