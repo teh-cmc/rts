@@ -14,6 +14,8 @@ pub enum Mode {
 pub struct Camera {
     inner: Camera3D,
     mode: Mode,
+
+    updates_prev: Option<Updates>,
     updater: Box<dyn Updater + Send + Sync + 'static>,
 }
 
@@ -23,6 +25,7 @@ impl Camera {
         Self {
             inner,
             mode,
+            updates_prev: None,
             updater,
         }
     }
@@ -54,8 +57,14 @@ impl Camera {
             }
         });
 
-        let updates = Updates::from_input(rl);
+        let updates = if rl.read(|rl| rl.is_mouse_button_up(MouseButton::MOUSE_LEFT_BUTTON)) {
+            Updates::from_input(rl, None)
+        } else {
+            Updates::from_input(rl, self.updates_prev.as_ref())
+        };
+
         let (pos, target) = self.updater.update(delta, &updates);
+        self.updates_prev = updates.into();
 
         self.inner.position = (pos.x, pos.y, pos.z).into();
         self.inner.target = (target.x, target.y, target.z).into();
@@ -68,7 +77,7 @@ trait Updater {
     fn update(&mut self, delta: &ResrcDeltaTime, updates: &Updates) -> (Vec3, Point3);
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 struct Updates {
     mov_left: bool,
     mov_up: bool,
@@ -80,12 +89,15 @@ struct Updates {
     rot_right: bool,
     rot_down: bool,
 
+    mouse_pos: Vec2,
+    mouse_diff: Vec2,
+
     zoom: i32,
 }
 
 impl Updates {
     // TODO(cmc): kbd state + no rl ref
-    pub fn from_input(rl: &ResrcRaylib) -> Self {
+    pub fn from_input(rl: &ResrcRaylib, prev: Option<&Self>) -> Self {
         let ((mov_left, mov_up, mov_right, mov_down), zoom) = rl.read(|rl| {
             let dir = (
                 rl.is_key_down(KeyboardKey::KEY_A),
@@ -98,15 +110,27 @@ impl Updates {
             (dir, zoom)
         });
 
+        let mouse_pos = rl.read(|rl| rl.get_mouse_position());
+        let mouse_pos: Vec2 = (mouse_pos.x, mouse_pos.y).into();
+        let mouse_diff = prev
+            .map_or_else(|| (0., 0.).into(), |u| *mouse_pos - *u.mouse_pos)
+            .into();
+
         Self {
             mov_left,
             mov_up,
             mov_right,
             mov_down,
 
-            zoom,
+            rot_left: false,
+            rot_up: false,
+            rot_right: false,
+            rot_down: false,
 
-            ..Default::default()
+            mouse_pos,
+            mouse_diff,
+
+            zoom,
         }
     }
 }
@@ -221,6 +245,14 @@ mod updaters {
         dir: Vec3,
         target: Point3,
         speed_multiplier: f32,
+        pitch: f32,
+        yaw: f32,
+        sensitivity: f32,
+    }
+
+    impl Free {
+        const MAX_PITCH: f32 = Self::PI / 4.01;
+        const PI: f32 = consts::PI as f32;
     }
 
     impl Default for Free {
@@ -230,6 +262,9 @@ mod updaters {
                 dir: (0., 0., -1.).into(),
                 target: (0., 0., 0.).into(),
                 speed_multiplier: 50.,
+                pitch: 0.,
+                yaw: -Self::MAX_PITCH,
+                sensitivity: 0.01,
             }
         }
     }
@@ -238,21 +273,31 @@ mod updaters {
         fn update(&mut self, delta: &ResrcDeltaTime, updates: &Updates) -> (Vec3, Point3) {
             let delta = delta.0 * self.speed_multiplier;
 
-            let dir = self.dir.normalize();
+            self.pitch += updates.mouse_diff.y * self.sensitivity;
+            self.pitch = self.pitch.max(-Self::MAX_PITCH).min(Self::MAX_PITCH);
+            self.yaw -= updates.mouse_diff.x * self.sensitivity;
+            self.dir = {
+                let mut dir = self.dir.normalize();
+                dir.x = self.yaw.cos() + self.pitch.cos();
+                dir.y = self.pitch.sin();
+                dir.z = self.yaw.sin() + self.pitch.cos();
+                dir.normalize().into()
+            };
+
             let up = (0., 1., 0.).into();
-            let left = dir.cross(up);
+            let left = self.dir.cross(up).normalize();
 
             if updates.mov_left {
-                *self.pos += delta * left;
-            }
-            if updates.mov_right {
                 *self.pos -= delta * left;
             }
+            if updates.mov_right {
+                *self.pos += delta * left;
+            }
             if updates.mov_up {
-                *self.pos -= delta * dir;
+                *self.pos += delta * *self.dir;
             }
             if updates.mov_down {
-                *self.pos += delta * dir;
+                *self.pos -= delta * *self.dir;
             }
 
             let target = *self.pos + *self.dir;

@@ -25,6 +25,7 @@ pub mod prelude {
 }
 
 // TODO(cmc): macros everywhere.
+// TODO(cmc): provide Add, AddAssign and everything else.
 
 pub type Quat = CGQuat<f32>;
 
