@@ -46,13 +46,19 @@ fn main() {
     world.insert(ResrcModelView::default());
     world.insert(ResrcProjection::default());
 
-    let model = rts::voxel::VoxelModel::from_vox(include_bytes!(
+    let models = rts::voxel::VoxelModel::from_vox(include_bytes!(
         "/home/cmc/dev/ephtracy/voxel-model/vox/scan/teapot.vox"
     ))
     .unwrap();
 
-    for m in model.iter() {
-        dbg!(m.stats());
+    for model in models.into_iter() {
+        world
+            .create_entity()
+            .with(CompVoxelModel(model))
+            .with(CompGridPosition((0, 0, 0).into()))
+            .with(CompInvalidated)
+            .with(CompColor(Color::RED))
+            .build();
     }
 
     // const TEAPOT_PATH: &str =

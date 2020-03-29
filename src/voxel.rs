@@ -98,6 +98,13 @@ impl VoxelModel {
     pub fn stats(&self /* , passes: &[OptimizationPass] */) -> VoxelModelStats {
         self.chunks.iter().map(|(_, c)| c.stats(/* passes */)).sum()
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (Vec3i, bool)> + '_ {
+        self.chunks
+            .iter()
+            .map(|(world_pos, c)| c.iter_world(world_pos))
+            .flatten()
+    }
 }
 
 impl VoxelModel {
@@ -213,6 +220,20 @@ impl IndexMut<&WorldPos> for VoxelModel {
         };
 
         voxel
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+use std::fmt;
+
+impl fmt::Debug for VoxelModel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let stats = self.stats();
+        f.debug_struct("VoxelModel")
+            .field("nb_voxels", &stats.nb_voxels)
+            .field("nb_triangles", &stats.nb_triangles)
+            .finish()
     }
 }
 

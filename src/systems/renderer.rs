@@ -28,6 +28,8 @@ impl<'a> System<'a> for Renderer {
         ReadStorage<'a, CompTransform3D>,
         ReadStorage<'a, CompSelected>,
         ReadStorage<'a, CompColor>,
+        ReadStorage<'a, CompVoxelModel>,
+        ReadStorage<'a, CompGridPosition>,
     );
 
     fn run(&mut self, sys_data: Self::SystemData) {
@@ -42,6 +44,8 @@ impl<'a> System<'a> for Renderer {
             transforms,
             selected,
             colors,
+            voxels,
+            grid_pos,
         ) = sys_data;
 
         let thread = self.0.as_ref().unwrap();
@@ -63,12 +67,8 @@ impl<'a> System<'a> for Renderer {
                 *m_view.0 = *hacks::get_matrix_modelview();
                 *m_proj.0 = *hacks::get_matrix_projection();
 
-                for (
-                    e,
-                    &mut CompModel3D(ref mut model),
-                    &CompTransform3D(transform),
-                    &CompColor(color),
-                ) in (&entities, &mut models, &transforms, &colors).join()
+                for (e, CompVoxelModel(model), CompGridPosition(world_pos), &CompColor(color)) in
+                    (&entities, &voxels, &grid_pos, &colors).join()
                 {
                     // TODO(cmc): something smarter
                     let color = if let Some(_) = selected.get(e) {
@@ -77,29 +77,16 @@ impl<'a> System<'a> for Renderer {
                         color
                     };
 
-                    // TODO(cmc): needs interior mutability... or a transform
-                    // dedicated system?
-                    // model.set_transform(&transform.into());
-                    d2.draw_model(
-                        model,
-                        Vector3::new(transform.w.x, transform.w.y, transform.w.z),
-                        1.,
-                        color,
-                    );
+                    use raylib::core::math::Vector3 as RayVector3;
+                    let dims: RayVector3 = (1., 1., 1.).into();
 
-                    // NOTE(cmc): draw_model_wires is bugged to death when
-                    // running through emscripten; haven't digged into it yet...
-                    // #[cfg(not(target_os = "emscripten"))]
-                    // d2.draw_model_wires(model, Vector3::zero(), 1.0, Color::BLACK);
-                    #[cfg(target_os = "emscripten")]
-                    {
-                        d2.draw_cube_wires(
-                            Vector3::new(transform.w.x, transform.w.y, transform.w.z),
-                            transform.x.x,
-                            transform.y.y,
-                            transform.z.z,
-                            Color::BLACK,
-                        );
+                    let voxels = model
+                        .iter()
+                        .filter(|(_, voxel)| *voxel)
+                        .map(|(pos, _)| **world_pos + *pos);
+                    for pos in voxels {
+                        let pos: RayVector3 = (pos.x as f32, pos.y as f32, pos.z as f32).into();
+                        d2.draw_cube_v(pos, dims, color);
                     }
                 }
 
@@ -113,6 +100,8 @@ impl<'a> System<'a> for Renderer {
                         CompDirectShape::Rect { .. } => {}
                     }
                 }
+
+                for _ in (&voxels, &grid_pos).join() {}
 
                 // TODO(cmc): Poor man's axes
                 {
@@ -259,3 +248,45 @@ mod hacks {
         to_mat4(m)
     }
 }
+
+// -----------------------------------------------------------------------------
+
+// for (
+//     e,
+//     &mut CompModel3D(ref mut model),
+//     &CompTransform3D(transform),
+//     &CompColor(color),
+// ) in (&entities, &mut models, &transforms, &colors).join()
+// {
+//     // TODO(cmc): something smarter
+//     let color = if let Some(_) = selected.get(e) {
+//         Color::GOLD
+//     } else {
+//         color
+//     };
+
+//     // TODO(cmc): needs interior mutability... or a transform
+//     // dedicated system?
+//     // model.set_transform(&transform.into());
+//     d2.draw_model(
+//         model,
+//         Vector3::new(transform.w.x, transform.w.y, transform.w.z),
+//         1.,
+//         color,
+//     );
+
+//     // NOTE(cmc): draw_model_wires is bugged to death when
+//     // running through emscripten; haven't digged into it yet...
+//     // #[cfg(not(target_os = "emscripten"))]
+//     // d2.draw_model_wires(model, Vector3::zero(), 1.0, Color::BLACK);
+//     #[cfg(target_os = "emscripten")]
+//     {
+//         d2.draw_cube_wires(
+//             Vector3::new(transform.w.x, transform.w.y, transform.w.z),
+//             transform.x.x,
+//             transform.y.y,
+//             transform.z.z,
+//             Color::BLACK,
+//         );
+//     }
+// }
