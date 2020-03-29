@@ -217,16 +217,18 @@ mod updaters {
 
     #[derive(Debug, Clone)]
     pub struct Free {
-        elapsed: f32,
-        radius: f32,
+        pos: Vec3,
+        dir: Vec3,
+        target: Point3,
         speed_multiplier: f32,
     }
 
     impl Default for Free {
         fn default() -> Self {
             Self {
-                elapsed: 0.,
-                radius: 100.0,
+                pos: (0., 0., 0.).into(),
+                dir: (0., 0., -1.).into(),
+                target: (0., 0., 0.).into(),
                 speed_multiplier: 50.,
             }
         }
@@ -234,17 +236,28 @@ mod updaters {
 
     impl Updater for Free {
         fn update(&mut self, delta: &ResrcDeltaTime, updates: &Updates) -> (Vec3, Point3) {
-            self.radius -= updates.zoom as f32;
-            self.elapsed += delta.0;
+            let delta = delta.0 * self.speed_multiplier;
 
-            let pos = (
-                self.elapsed.sin() * self.radius,
-                0.,
-                self.elapsed.cos() * self.radius,
-            );
-            let target = (0., 0., 0.);
+            let dir = self.dir.normalize();
+            let up = (0., 1., 0.).into();
+            let left = dir.cross(up);
 
-            (pos.into(), target.into())
+            if updates.mov_left {
+                *self.pos += delta * left;
+            }
+            if updates.mov_right {
+                *self.pos -= delta * left;
+            }
+            if updates.mov_up {
+                *self.pos -= delta * dir;
+            }
+            if updates.mov_down {
+                *self.pos += delta * dir;
+            }
+
+            let target = *self.pos + *self.dir;
+
+            (self.pos.clone(), (target.x, target.y, target.z).into())
         }
     }
 }
