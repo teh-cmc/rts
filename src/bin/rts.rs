@@ -10,7 +10,7 @@ use std::sync::Arc;
 fn main() {
     const WINDOW_WIDTH: i32 = 1280;
     const WINDOW_HEIGHT: i32 = 720;
-    let (mut rl, rl_thread) = raylib::init()
+    let (rl, rl_thread) = raylib::init()
         .size(WINDOW_WIDTH, WINDOW_HEIGHT)
         .title("RTS")
         .build();
@@ -95,8 +95,8 @@ fn main() {
 
     let mut rl = ResrcRaylib::new(rl);
     world.insert(rl.clone());
+    rl.write(|rl| rl.hide_cursor());
 
-    // TODO(cmc): switchable cameras (esp. free mode for debugging)
     let cam = {
         let inner = Camera3D::perspective(
             Vector3::zero(),
@@ -105,12 +105,7 @@ fn main() {
             60.0,
         );
 
-        rl.write(|rl| {
-            rl.set_camera_mode(&inner, CameraMode::CAMERA_CUSTOM);
-            rl.hide_cursor();
-        });
-
-        ResrcCamera::new(inner)
+        ResrcCamera::new(inner, ResrcCameraMode::RTS)
     };
     world.insert(cam);
 
@@ -122,7 +117,7 @@ fn main() {
         emscripten::emscripten_sleep(1);
 
         let mut main_loop = move || {
-            let delta = rl.read(|rl| rl.get_frame_time() * 50.0);
+            let delta = rl.read(|rl| rl.get_frame_time());
             world.write_resource::<ResrcDeltaTime>().0 = delta;
 
             dispatcher.dispatch(&mut world);
@@ -136,7 +131,7 @@ fn main() {
     {
         rl.write(|rl| rl.set_target_fps(120));
         while !rl.read(|rl| rl.window_should_close()) {
-            let delta = rl.read(|rl| rl.get_frame_time() * 50.0);
+            let delta = rl.read(|rl| rl.get_frame_time());
             world.write_resource::<ResrcDeltaTime>().0 = delta;
 
             dispatcher.dispatch(&mut world);

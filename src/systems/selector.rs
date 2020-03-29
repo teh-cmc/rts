@@ -1,7 +1,7 @@
 use crate::{components::prelude::*, maths::prelude::*, resources::prelude::*};
 use anyhow::{anyhow, Error as AnyError, Result as AnyResult};
 use collision::{Frustum, Plane};
-use raylib::color::Color;
+use raylib::{color::Color, consts::CameraMode};
 use specs::prelude::*;
 
 // -----------------------------------------------------------------------------
@@ -31,6 +31,7 @@ impl<'a> System<'a> for Selector {
         ReadExpect<'a, ResrcRaylib>,
         ReadExpect<'a, ResrcMouseState>,
         ReadExpect<'a, ResrcBoundingTree>,
+        ReadExpect<'a, ResrcCamera>,
         ReadExpect<'a, ResrcProjection>,
         ReadExpect<'a, ResrcModelView>,
         WriteStorage<'a, CompDirectShape>,
@@ -39,8 +40,12 @@ impl<'a> System<'a> for Selector {
     );
 
     fn run(&mut self, sys_data: Self::SystemData) {
-        let (entities, rl, mouse, bt, m_proj, m_view, mut shapes, mut selected, mut colors) =
+        let (entities, rl, mouse, bt, cam, m_proj, m_view, mut shapes, mut selected, mut colors) =
             sys_data;
+
+        if cam.mode() != ResrcCameraMode::RTS {
+            return;
+        }
 
         match self.state {
             SelectorState::Idle => {

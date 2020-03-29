@@ -142,16 +142,7 @@ impl<'a> System<'a> for Renderer {
 
             d.draw_fps(swidth - 100, 10);
             imgui::draw_cursor(d, x, y);
-            #[rustfmt::skip]
-            imgui::draw_debug_info(
-                d,
-                10, 10, 0, 0, 10,
-                "Camera default controls:".into(),
-                &[
-                    "- Move with keys: W, A, S, D",
-                    "- Mouse wheel to zoom"
-                ],
-            );
+
             #[rustfmt::skip]
             imgui::draw_debug_info(
                 d,
@@ -163,6 +154,40 @@ impl<'a> System<'a> for Renderer {
                     format!("- Triangles: {:#?}", render_triangles).as_str(),
                 ],
             );
+
+            match cam.mode() {
+                ResrcCameraMode::RTS => {
+                    #[rustfmt::skip]
+                    imgui::draw_debug_info(
+                        d,
+                        10, 10, 0, 0, 10,
+                        "Camera mode [RTS]:".into(),
+                        &[
+                            "- Move with keys: W, A, S, D",
+                            "- Mouse wheel to zoom"
+                        ],
+                    );
+                }
+                ResrcCameraMode::FREE => {
+                    #[rustfmt::skip]
+                    imgui::draw_debug_info(
+                        d,
+                        10, 10, 0, 0, 10,
+                        "Camera mode [FREE]:".into(),
+                        &[ ],
+                    );
+                }
+                ResrcCameraMode::ORBITAL => {
+                    #[rustfmt::skip]
+                    imgui::draw_debug_info(
+                        d,
+                        10, 10, 0, 0, 10,
+                        "Camera mode [ORBITAL]:".into(),
+                        &[ ],
+                    );
+                }
+                _ => {}
+            }
         });
     }
 }
