@@ -307,6 +307,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dot_vox"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83c18405ef54de0398b77a3ec8394d3a1639e7bf060e1385201e8db40c44ab41"
+dependencies = [
+ "byteorder",
+ "lazy_static 1.4.0",
+ "log",
+ "nom 4.2.3",
+]
+
+[[package]]
 name = "either"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -917,6 +929,7 @@ dependencies = [
  "arr_macro",
  "cgmath",
  "collision",
+ "dot_vox",
  "rand 0.7.3",
  "raylib",
  "serde",

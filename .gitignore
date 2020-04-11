@@ -9,3 +9,4 @@ perf.*
 cargo-cache/
 cargo-target/
 vgcore.*
+*.svg

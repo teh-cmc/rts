@@ -1,13 +1,16 @@
 use crate::{
-    maths::{Mat4, Point3, Vec2, Vec2i, Vec3},
+    maths::{Mat4, Point3, Vec2, Vec2i, Vec3, Vec3i},
     resources::prelude::Model,
+    voxel::VoxelModel as RawVoxelModel,
 };
 use specs::{prelude::*, storage::HashMapStorage, Component};
+use std::sync::Arc;
 
 pub mod prelude {
     pub use super::{
-        Color as CompColor, DirectShape as CompDirectShape, Invalidated as CompInvalidated,
-        Model3D as CompModel3D, Selected as CompSelected, Transform3D as CompTransform3D,
+        Color as CompColor, DirectShape as CompDirectShape, GridPosition as CompGridPosition,
+        Invalidated as CompInvalidated, Model3D as CompModel3D, Selected as CompSelected,
+        Transform3D as CompTransform3D, VoxelModel as CompVoxelModel,
     };
 }
 
@@ -33,8 +36,18 @@ pub enum DirectShape {
 }
 
 #[derive(Debug, Component)]
+#[storage(HashMapStorage)]
+pub struct VoxelModel(pub RawVoxelModel);
+
+#[derive(Clone, Debug, Component)]
 #[storage(VecStorage)]
-pub struct Model3D(pub Model);
+pub struct GridPosition(pub Vec3i);
+
+// -----------------------------------------------------------------------------
+
+#[derive(Debug, Component)]
+#[storage(VecStorage)]
+pub struct Model3D(pub Arc<Model>);
 
 #[derive(Clone, Copy, Debug, Component)]
 #[storage(VecStorage)]

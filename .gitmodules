@@ -1,0 +1,3 @@
+[submodule "submodules/voxel-model"]
+	path = submodules/voxel-model
+	url = git@github.com:ephtracy/voxel-model.git

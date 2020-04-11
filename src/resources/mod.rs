@@ -7,7 +7,7 @@ mod raylib;
 pub mod prelude {
     pub use super::{
         bounding_tree::BoundingTree as ResrcBoundingTree,
-        camera::Camera as ResrcCamera,
+        camera::{Camera as ResrcCamera, Mode as ResrcCameraMode},
         models::{MeshID, MeshStore as ResrcMeshStore, Model},
         mouse::MouseState as ResrcMouseState,
         raylib::Raylib as ResrcRaylib,
