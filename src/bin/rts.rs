@@ -46,9 +46,10 @@ fn main() {
     world.insert(ResrcModelView::default());
     world.insert(ResrcProjection::default());
 
-    let models = rts::voxel::VoxelModel::from_vox(include_bytes!(
-        "/home/cmc/dev/ephtracy/voxel-model/vox/scan/teapot.vox"
-    ))
+    let models = rts::voxel::VoxelModel::from_vox(include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/submodules/voxel-model/vox/scan/dragon.vox"
+    )))
     .unwrap();
     for model in models.into_iter() {
         world
